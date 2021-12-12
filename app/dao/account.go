@@ -38,6 +38,7 @@ func (r *account) FindByUsername(ctx context.Context, username string) (*object.
 	return entity, nil
 }
 
+// CreateAccount : username, passwordから新しいアカウントを作成
 func (r *account) CreateAccount(ctx context.Context, username, password string) error {
 	query := `insert into account (
 				username,
