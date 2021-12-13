@@ -14,4 +14,7 @@ type Status interface {
 
 	// Delete status which has specified ID
 	DeleteByID(ctx context.Context, id int) error
+
+	// Fetch statuses which has specified ID
+	List(ctx context.Context, maxID, sinceID, limit int) ([]object.Status, error)
 }
