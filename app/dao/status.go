@@ -54,3 +54,20 @@ func (r *status) FindByID(ctx context.Context, id int) (*object.Status, error) {
 
 	return entity, nil
 }
+
+// DeleteByID : IDからステータスを削除
+func (r *status) DeleteByID(ctx context.Context, id int) error {
+	query := `delete 
+			  from status
+			  where id = ?`
+
+	_, err := r.db.QueryxContext(ctx, query, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		return fmt.Errorf("%w", err)
+	}
+
+	return nil
+}
