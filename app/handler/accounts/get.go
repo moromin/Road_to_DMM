@@ -8,20 +8,14 @@ import (
 	"github.com/go-chi/chi"
 )
 
-// Request body for `GET /v1/accounts/{username}`
-type getAccountRequest struct {
-	Username string
-}
-
 // Handle request for `GET /v1/accounts/{username}`
 func (h *handler) GetAccount(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var req getAccountRequest
-	req.Username = chi.URLParam(r, "username")
+	username := chi.URLParam(r, "username")
 
 	repo := h.app.Dao.Account()
-	account, err := repo.FindByUsername(ctx, req.Username)
+	account, err := repo.FindByUsername(ctx, username)
 	if account == nil {
 		httperror.Error(w, http.StatusNotFound)
 		return
