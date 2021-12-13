@@ -1,8 +1,14 @@
 package repository
 
-import "context"
+import (
+	"context"
+	"yatter-backend-go/app/domain/object"
+)
 
 type Status interface {
 	// Create a status which has specified content and authenticated account id
-	CreateStatus(ctx context.Context, content string, accountID int64) error
+	Create(ctx context.Context, content string, accountID int64) error
+
+	// Fetch account which has specified ID
+	FindByID(ctx context.Context, id int) (*object.Status, error)
 }
