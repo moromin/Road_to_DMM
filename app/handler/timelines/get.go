@@ -8,9 +8,9 @@ import (
 )
 
 type ListRequest struct {
-	MaxID   int
-	SinceID int
-	Limit   int
+	MaxID   int64
+	SinceID int64
+	Limit   int64
 }
 
 // Handle request for `GET /v1/timelines/*`
@@ -28,7 +28,7 @@ func (h *handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strMaxID != "" {
-		maxID, err := strconv.Atoi(strMaxID)
+		maxID, err := strconv.ParseInt(strMaxID, 10, 64)
 		if err != nil {
 			httperror.BadRequest(w, err)
 			return
@@ -40,7 +40,7 @@ func (h *handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strSinceID != "" {
-		sinceID, err := strconv.Atoi(strSinceID)
+		sinceID, err := strconv.ParseInt(strSinceID, 10, 64)
 		if err != nil {
 			httperror.BadRequest(w, err)
 			return
@@ -52,7 +52,7 @@ func (h *handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strLimit != "" {
-		limit, err := strconv.Atoi(strLimit)
+		limit, err := strconv.ParseInt(strLimit, 10, 64)
 		if err != nil {
 			httperror.BadRequest(w, err)
 			return

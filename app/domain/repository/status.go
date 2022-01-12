@@ -10,11 +10,11 @@ type Status interface {
 	Create(ctx context.Context, content string, accountID int64) error
 
 	// Fetch status which has specified ID
-	FindByID(ctx context.Context, id int) (*object.Status, error)
+	FindByID(ctx context.Context, id int64) (*object.Status, error)
 
 	// Delete status which has specified ID
-	DeleteByID(ctx context.Context, id int) error
+	DeleteByID(ctx context.Context, id int64) error
 
 	// Fetch statuses which has specified ID
-	List(ctx context.Context, maxID, sinceID, limit int) ([]object.Status, error)
+	List(ctx context.Context, maxID, sinceID, limit int64) ([]object.Status, error)
 }

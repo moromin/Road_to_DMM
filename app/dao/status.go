@@ -39,7 +39,7 @@ func (r *status) Create(ctx context.Context, content string, accountID int64) er
 }
 
 // FindByID : IDからステータスを取得
-func (r *status) FindByID(ctx context.Context, id int) (*object.Status, error) {
+func (r *status) FindByID(ctx context.Context, id int64) (*object.Status, error) {
 	entity := new(object.Status)
 
 	query := `select * 
@@ -57,7 +57,7 @@ func (r *status) FindByID(ctx context.Context, id int) (*object.Status, error) {
 }
 
 // DeleteByID : IDからステータスを削除
-func (r *status) DeleteByID(ctx context.Context, id int) error {
+func (r *status) DeleteByID(ctx context.Context, id int64) error {
 	query := `delete 
 			  from status
 			  where id = ?`
@@ -74,7 +74,7 @@ func (r *status) DeleteByID(ctx context.Context, id int) error {
 }
 
 // List : maxID, sinceID, limit からタイムライン（ステータスのスライス）を取得
-func (r *status) List(ctx context.Context, maxID, sinceID, limit int) ([]object.Status, error) {
+func (r *status) List(ctx context.Context, maxID, sinceID, limit int64) ([]object.Status, error) {
 	where := ""
 	max := ""
 	since := ""

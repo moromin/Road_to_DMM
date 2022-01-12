@@ -3,19 +3,15 @@ package statuses
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"yatter-backend-go/app/handler/httperror"
-
-	"github.com/go-chi/chi"
+	"yatter-backend-go/app/handler/request"
 )
 
 // Handler request for `DELETE /v1/statuses/{id}`
 func (h *handler) Delete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	strID := chi.URLParam(r, "id")
-
-	id, err := strconv.Atoi(strID)
+	id, err := request.IDOf(r)
 	if err != nil {
 		httperror.BadRequest(w, err)
 		return
