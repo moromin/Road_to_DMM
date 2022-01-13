@@ -38,6 +38,7 @@ func (r *account) FindByUsername(ctx context.Context, username string) (*object.
 	return entity, nil
 }
 
+// FindByUsername : IDからユーザを取得
 func (r *account) FindByID(ctx context.Context, id int) (*object.Account, error) {
 	entity := new(object.Account)
 	query := `select * 
