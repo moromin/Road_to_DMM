@@ -46,7 +46,7 @@ func (r *status) Create(ctx context.Context, content string, accountID int64) (i
 
 // FindByID : IDからステータスを取得
 func (r *status) FindByID(ctx context.Context, id int64) (*object.Status, error) {
-	entity := new(object.Status)
+	entity := &object.Status{}
 
 	query := `select *
 			  from status
@@ -68,12 +68,15 @@ func (r *status) DeleteByID(ctx context.Context, id int64) error {
 			  from status
 			  where id = ?`
 
-	_, err := r.db.QueryxContext(ctx, query, id)
+	res, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil
-		}
 		return fmt.Errorf("%w", err)
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	} else if count == 0 {
+		return fmt.Errorf("status is not found")
 	}
 
 	return nil

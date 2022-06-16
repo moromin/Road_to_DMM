@@ -7,7 +7,7 @@ import (
 	"yatter-backend-go/app/handler/request"
 )
 
-// Handler request for `GET /v1/statuses/{id}`
+// Handle request for `GET /v1/statuses/{id}`
 func (h *handler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -19,11 +19,11 @@ func (h *handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	statusRepo := h.app.Dao.Status()
 	status, err := statusRepo.FindByID(ctx, id)
-	if status == nil {
-		httperror.Error(w, http.StatusNotFound)
-		return
-	} else if err != nil {
+	if err != nil {
 		httperror.BadRequest(w, err)
+		return
+	} else if status == nil {
+		httperror.Error(w, http.StatusNotFound)
 		return
 	}
 
@@ -31,6 +31,9 @@ func (h *handler) Get(w http.ResponseWriter, r *http.Request) {
 	account, err := accountRepo.FindByID(ctx, status.AccountID)
 	if err != nil {
 		httperror.BadRequest(w, err)
+		return
+	} else if status == nil {
+		httperror.Error(w, http.StatusNotFound)
 		return
 	}
 	status.Account = *account
