@@ -84,12 +84,8 @@ func (r *status) DeleteByID(ctx context.Context, id int64) error {
 
 // List : maxID, sinceID, limit からタイムライン（ステータスのスライス）を取得
 func (r *status) List(ctx context.Context, maxID, sinceID, limit int64) ([]object.Status, error) {
-	where := ""
-	max := ""
-	since := ""
-	and := ""
+	var where, max, since, and string
 
-	fmt.Println(limit)
 	if maxID != 0 || sinceID != 0 {
 		where = "WHERE"
 		if maxID != 0 {
@@ -98,9 +94,9 @@ func (r *status) List(ctx context.Context, maxID, sinceID, limit int64) ([]objec
 		if sinceID != 0 {
 			since = fmt.Sprintf("id >= %d", sinceID)
 		}
-	}
-	if maxID != 0 && sinceID != 0 {
-		and = "AND"
+		if maxID != 0 && sinceID != 0 {
+			and = "AND"
+		}
 	}
 
 	query := fmt.Sprintf(`SELECT * FROM status %s %s %s %s LIMIT %d`, where, max, and, since, limit)
