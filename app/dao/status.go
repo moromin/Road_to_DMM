@@ -23,7 +23,7 @@ func NewStatus(db *sqlx.DB) repository.Status {
 }
 
 // CreateAccount : content, accountIDから新しいステータスを作成
-func (r *status) Create(ctx context.Context, content string, accountID int64) error {
+func (r *status) Create(ctx context.Context, content string, accountID int64) (int64, error) {
 	query := `insert into status (
 				account_id,
 				content
@@ -31,18 +31,24 @@ func (r *status) Create(ctx context.Context, content string, accountID int64) er
 				?, ?
 			  )`
 
-	_, err := r.db.QueryContext(ctx, query, accountID, content)
+	// _, err := r.db.QueryContext(ctx, query, accountID, content)
+	res, err := r.db.ExecContext(ctx, query, accountID, content)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 // FindByID : IDからステータスを取得
 func (r *status) FindByID(ctx context.Context, id int64) (*object.Status, error) {
 	entity := new(object.Status)
 
-	query := `select * 
+	query := `select *
 			  from status
 			  where id = ?`
 	err := r.db.QueryRowxContext(ctx, query, id).StructScan(entity)
@@ -58,7 +64,7 @@ func (r *status) FindByID(ctx context.Context, id int64) (*object.Status, error)
 
 // DeleteByID : IDからステータスを削除
 func (r *status) DeleteByID(ctx context.Context, id int64) error {
-	query := `delete 
+	query := `delete
 			  from status
 			  where id = ?`
 

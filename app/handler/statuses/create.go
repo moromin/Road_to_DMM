@@ -21,7 +21,6 @@ func (e errFailedToReadContext) Error() string {
 }
 
 // Handle request for `POST /v1/statuses`
-// TODO: empty is OK?
 func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -43,10 +42,12 @@ func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	statusRepo := h.app.Dao.Status()
-	if err := statusRepo.Create(ctx, status.Content, status.Account.ID); err != nil {
+	id, err := statusRepo.Create(ctx, status.Content, status.Account.ID)
+	if err != nil {
 		httperror.InternalServerError(w, err)
 		return
 	}
+	status.ID = id
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(status); err != nil {

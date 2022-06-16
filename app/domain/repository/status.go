@@ -7,7 +7,7 @@ import (
 
 type Status interface {
 	// Create a status which has specified content and authenticated account id
-	Create(ctx context.Context, content string, accountID int64) error
+	Create(ctx context.Context, content string, accountID int64) (int64, error)
 
 	// Fetch status which has specified ID
 	FindByID(ctx context.Context, id int64) (*object.Status, error)
