@@ -2,9 +2,10 @@ package statuses
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"strings"
 	"yatter-backend-go/app/domain/object"
+	"yatter-backend-go/app/handler/auth"
 	"yatter-backend-go/app/handler/httperror"
 )
 
@@ -13,7 +14,14 @@ type AddRequest struct {
 	Content string
 }
 
+type errFailedToReadContext struct{}
+
+func (e errFailedToReadContext) Error() string {
+	return fmt.Sprint("failed to read context value")
+}
+
 // Handle request for `POST /v1/statuses`
+// TODO: empty is OK?
 func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -23,20 +31,20 @@ func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a := r.Header.Get("Authentication")
-	pair := strings.SplitN(a, " ", 2)
-	username := pair[1]
+	account := auth.AccountOf(r)
+	if account == nil {
+		httperror.InternalServerError(w, errFailedToReadContext{})
+		return
+	}
 
-	accountRepo := h.app.Dao.Account()
-	account, _ := accountRepo.FindByUsername(ctx, username)
-
-	status := new(object.Status)
-	status.Content = req.Content
-	status.Account = *account
+	status := &object.Status{
+		Content: req.Content,
+		Account: *account,
+	}
 
 	statusRepo := h.app.Dao.Status()
 	if err := statusRepo.Create(ctx, status.Content, status.Account.ID); err != nil {
-		httperror.BadRequest(w, err)
+		httperror.InternalServerError(w, err)
 		return
 	}
 
