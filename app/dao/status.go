@@ -56,7 +56,7 @@ func (r *status) FindByID(ctx context.Context, id int64) (*object.Status, error)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 
 	return entity, nil
@@ -70,13 +70,13 @@ func (r *status) DeleteByID(ctx context.Context, id int64) error {
 
 	res, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
-		return fmt.Errorf("%w", err)
+		return err
 	}
 	count, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%w", err)
+		return err
 	} else if count == 0 {
-		return fmt.Errorf("status is not found")
+		return fmt.Errorf("status %d is not found", id)
 	}
 
 	return nil

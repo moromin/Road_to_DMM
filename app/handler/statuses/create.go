@@ -2,7 +2,7 @@ package statuses
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"yatter-backend-go/app/domain/object"
 	"yatter-backend-go/app/handler/auth"
@@ -12,12 +12,6 @@ import (
 // Request body for `POST /v1/statuses`
 type AddRequest struct {
 	Content string
-}
-
-type errFailedToReadContext struct{}
-
-func (e errFailedToReadContext) Error() string {
-	return fmt.Sprint("failed to read context value")
 }
 
 // Handle request for `POST /v1/statuses`
@@ -32,7 +26,7 @@ func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	account := auth.AccountOf(r)
 	if account == nil {
-		httperror.InternalServerError(w, errFailedToReadContext{})
+		httperror.InternalServerError(w, errors.New("failed to read ID"))
 		return
 	}
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"yatter-backend-go/app/domain/object"
 	"yatter-backend-go/app/domain/repository"
 
@@ -31,8 +30,7 @@ func (r *account) FindByUsername(ctx context.Context, username string) (*object.
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 
 	return entity, nil
@@ -41,7 +39,7 @@ func (r *account) FindByUsername(ctx context.Context, username string) (*object.
 // FindByUsername : IDからユーザを取得
 func (r *account) FindByID(ctx context.Context, id int) (*object.Account, error) {
 	entity := new(object.Account)
-	query := `select * 
+	query := `select *
 			  from account
 			  where id = ?`
 	err := r.db.QueryRowxContext(ctx, query, id).StructScan(entity)
@@ -49,8 +47,7 @@ func (r *account) FindByID(ctx context.Context, id int) (*object.Account, error)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 
 	return entity, nil

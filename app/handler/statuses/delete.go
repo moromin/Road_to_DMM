@@ -3,6 +3,7 @@ package statuses
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"yatter-backend-go/app/handler/httperror"
 	"yatter-backend-go/app/handler/request"
@@ -21,7 +22,7 @@ func (h *handler) Delete(w http.ResponseWriter, r *http.Request) {
 	statusRepo := h.app.Dao.Status()
 	err = statusRepo.DeleteByID(ctx, id)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			httperror.Error(w, http.StatusNotFound)
 		} else {
 			httperror.BadRequest(w, err)
