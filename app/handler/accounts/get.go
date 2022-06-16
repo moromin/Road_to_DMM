@@ -16,11 +16,12 @@ func (h *handler) GetAccount(w http.ResponseWriter, r *http.Request) {
 
 	repo := h.app.Dao.Account()
 	account, err := repo.FindByUsername(ctx, username)
+	if err != nil {
+		httperror.BadRequest(w, err)
+		return
+	}
 	if account == nil {
 		httperror.Error(w, http.StatusNotFound)
-		return
-	} else if err != nil {
-		httperror.BadRequest(w, err)
 		return
 	}
 
