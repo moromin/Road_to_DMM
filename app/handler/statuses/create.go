@@ -36,7 +36,7 @@ func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	statusRepo := h.app.Dao.Status()
-	id, err := statusRepo.Create(ctx, status.Content, status.Account.ID)
+	id, err := statusRepo.Create(ctx, status.Account.ID, status.Content)
 	if err != nil {
 		httperror.InternalServerError(w, err)
 		return

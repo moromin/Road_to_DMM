@@ -23,11 +23,11 @@ func NewStatus(db *sqlx.DB) repository.Status {
 }
 
 // CreateAccount : content, accountIDから新しいステータスを作成
-func (r *status) Create(ctx context.Context, content string, accountID int64) (int64, error) {
-	query := `insert into status (
+func (r *status) Create(ctx context.Context, accountID int64, content string) (int64, error) {
+	query := `INSERT INTO status (
 				account_id,
 				content
-			  ) values (
+			  ) VALUES (
 				?, ?
 			  )`
 
