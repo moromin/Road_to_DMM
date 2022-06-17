@@ -27,10 +27,16 @@ type Option struct {
 func (h *handler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	const (
+		maxID   = "max_id"
+		sinceID = "since_id"
+		limit   = "limit"
+	)
+
 	options := []Option{
-		{"max_id", 0, 1, math.MaxInt64},
-		{"since_id", 0, 1, math.MaxInt64},
-		{"limit", 40, 0, 80},
+		{maxID, 0, 1, math.MaxInt64},
+		{sinceID, 0, 1, math.MaxInt64},
+		{limit, 40, 0, 80},
 	}
 	params, err := getOptionParams(r, options)
 	if err != nil {
@@ -38,9 +44,9 @@ func (h *handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req := ListRequest{
-		MaxID:   params["max_id"],
-		SinceID: params["since_id"],
-		Limit:   params["limit"],
+		MaxID:   params[maxID],
+		SinceID: params[sinceID],
+		Limit:   params[limit],
 	}
 
 	statusRepo := h.app.Dao.Status()
@@ -81,7 +87,7 @@ func getOptionParams(r *http.Request, options []Option) (map[string]int64, error
 	var err error
 
 	for _, op := range options {
-		params[op.name], err = paramOf(r.URL.Query().Get(op.name), op.defaultValue, op.min, op.max)
+		params[op.name], err = paramOf(r.URL.Query().Get(string(op.name)), op.defaultValue, op.min, op.max)
 		if err != nil {
 			return nil, err
 		}
