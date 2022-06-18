@@ -3,10 +3,12 @@ CREATE TABLE `account` (
   `username` varchar(255) NOT NULL UNIQUE,
   `password_hash` varchar(255) NOT NULL,
   `display_name` varchar(255),
+  `create_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `followers_count` bigint(20) NOT NULL DEFAULT 0,
+  `following_count` bigint(20) NOT NULL DEFAULT 0,
+  `note` text,
   `avatar` text,
   `header` text,
-  `note` text,
-  `create_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 );
 
@@ -23,11 +25,13 @@ CREATE TABLE `status` (
 -- TODO: automate migration
 CREATE TABLE `follows` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `follower_id` bigint(20) NOT NULL,
-  `followee_id` bigint(20) NOT NULL,
-  INDEX `idx_follower_id` (`follower_id`),
-  INDEX `idx_followee_id` (`followee_id`),
-  CONSTRAINT `fk_follower_account_id` FOREIGN KEY (`follower_id`) REFERENCES  `account` (`id`),
-  CONSTRAINT `fk_followee_account_id` FOREIGN KEY (`followee_id`) REFERENCES  `account` (`id`),
+  `follower` VARCHAR(255) NOT NULL,
+  `followee` VARCHAR(255) NOT NULL,
+  -- `follower_id` bigint(20) NOT NULL,
+  -- `followee_id` bigint(20) NOT NULL,
+  -- INDEX `idx_follower_id` (`follower_id`),
+  -- INDEX `idx_followee_id` (`followee_id`),
+  -- CONSTRAINT `fk_follower_account_id` FOREIGN KEY (`follower_id`) REFERENCES  `account` (`id`),
+  -- CONSTRAINT `fk_followee_account_id` FOREIGN KEY (`followee_id`) REFERENCES  `account` (`id`),
   PRIMARY KEY (`id`)
 );

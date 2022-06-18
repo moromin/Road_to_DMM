@@ -25,6 +25,12 @@ type (
 		// The account's display name
 		DisplayName *string `json:"display_name,omitempty" db:"display_name"`
 
+		// Number of followers
+		FollowersCount int64 `json:"followers_count" db:"followers_count"`
+
+		// Number of following
+		FollowingCount int64 `json:"following_count" db:"following_count"`
+
 		// URL to the avatar image
 		Avatar *string `json:"avatar,omitempty"`
 
