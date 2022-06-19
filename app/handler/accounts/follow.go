@@ -11,7 +11,7 @@ import (
 	"github.com/go-chi/chi"
 )
 
-type FollowResponse struct {
+type Relationship struct {
 	ID         int64 `json:"id"`
 	Following  bool  `json:"following"`
 	FollowedBy bool  `json:"followed_by"`
@@ -43,7 +43,7 @@ func (h *handler) Follow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := &FollowResponse{
+	res := &Relationship{
 		ID:         id,
 		Following:  true,
 		FollowedBy: followedBy,

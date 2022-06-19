@@ -37,7 +37,7 @@ func (h *handler) Unfollow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := &FollowResponse{
+	res := &Relationship{
 		ID:         id,
 		Following:  false,
 		FollowedBy: followedBy,
