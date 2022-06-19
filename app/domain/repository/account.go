@@ -18,4 +18,7 @@ type Account interface {
 
 	// Follow an account
 	Follow(ctx context.Context, follower_id, followee_id int64) (int64, bool, error)
+
+	// Fetch accounts that followed by follower
+	FindFollowing(ctx context.Context, follower_id, limit int64) ([]object.Account, error)
 }

@@ -152,3 +152,34 @@ func (r *account) Transaction(txFunc func(*sqlx.Tx) error) error {
 	err = txFunc(tx)
 	return err
 }
+
+func (r *account) FindFollowing(ctx context.Context, follower_id, limit int64) ([]object.Account, error) {
+	accounts := make([]object.Account, 0)
+
+	query := `SELECT a.*
+				FROM follow as f
+				JOIN account as a
+				ON f.followee_id = a.id
+				WHERE follower_id = ?
+				LIMIT ?`
+
+	rows, err := r.db.QueryxContext(ctx, query, follower_id, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		account := object.Account{}
+		err := rows.StructScan(&account)
+		if err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, account)
+	}
+	if rows.Err() != nil {
+		return nil, err
+	}
+
+	return accounts, nil
+}
