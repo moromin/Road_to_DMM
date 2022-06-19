@@ -46,6 +46,32 @@ func Middleware(app *app.App) func(http.Handler) http.Handler {
 	}
 }
 
+// BasicAuth for basic authentication
+func BasicAuth(app *app.App) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+
+			username, password, ok := r.BasicAuth()
+			if !ok {
+				w.Header().Set("WWW-Authenticate", "Basic")
+				httperror.Error(w, http.StatusUnauthorized)
+				return
+			}
+
+			if account, err := app.Dao.Account().FindByUsername(ctx, username); err != nil {
+				httperror.InternalServerError(w, err)
+				return
+			} else if account == nil || !account.CheckPassword(password) {
+				httperror.Error(w, http.StatusUnauthorized)
+				return
+			} else {
+				next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), contextKey, account)))
+			}
+		})
+	}
+}
+
 // Read Account data from authorized request
 func AccountOf(r *http.Request) *object.Account {
 	if cv := r.Context().Value(contextKey); cv == nil {

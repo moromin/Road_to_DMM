@@ -24,7 +24,7 @@ func NewRouter(app *app.App) http.Handler {
 	r.Get("/{username}", h.Get)
 
 	r.Route("/", func(r chi.Router) {
-		r.Use(auth.Middleware(h.app))
+		r.Use(auth.BasicAuth(h.app))
 		r.Post("/{username}/follow", h.Follow)
 	})
 
