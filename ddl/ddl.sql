@@ -23,15 +23,13 @@ CREATE TABLE `status` (
 );
 
 -- TODO: automate migration
-CREATE TABLE `follows` (
+CREATE TABLE `follow` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `follower` VARCHAR(255) NOT NULL,
-  `followee` VARCHAR(255) NOT NULL,
-  -- `follower_id` bigint(20) NOT NULL,
-  -- `followee_id` bigint(20) NOT NULL,
+  `follower_id` bigint(20) NOT NULL,
+  `followee_id` bigint(20) NOT NULL,
   -- INDEX `idx_follower_id` (`follower_id`),
   -- INDEX `idx_followee_id` (`followee_id`),
-  -- CONSTRAINT `fk_follower_account_id` FOREIGN KEY (`follower_id`) REFERENCES  `account` (`id`),
-  -- CONSTRAINT `fk_followee_account_id` FOREIGN KEY (`followee_id`) REFERENCES  `account` (`id`),
+  CONSTRAINT `fk_follower_account_id` FOREIGN KEY (`follower_id`) REFERENCES  `account` (`id`),
+  CONSTRAINT `fk_followee_account_id` FOREIGN KEY (`followee_id`) REFERENCES  `account` (`id`),
   PRIMARY KEY (`id`)
 );

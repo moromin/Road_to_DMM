@@ -15,4 +15,8 @@ type Account interface {
 
 	// Create an account which has specified username and password
 	CreateAccount(ctx context.Context, username, password string) error
+
+	// Follow an account
+	// TODO: record account ID instead of username
+	Follow(ctx context.Context, follower_id, followee_id int64) (int64, bool, error)
 }
