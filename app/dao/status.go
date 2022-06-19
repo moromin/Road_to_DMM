@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"yatter-backend-go/app/domain/object"
 	"yatter-backend-go/app/domain/repository"
 
@@ -84,22 +83,8 @@ func (r *status) DeleteByID(ctx context.Context, id int64) error {
 
 // List : maxID, sinceID, limit からタイムライン（ステータスのスライス）を取得
 func (r *status) List(ctx context.Context, maxID, sinceID, limit int64) ([]object.Status, error) {
-	var where, max, since, and string
-
-	if maxID != 0 || sinceID != 0 {
-		where = "WHERE"
-		if maxID != 0 {
-			max = fmt.Sprintf("id <= %d", maxID)
-		}
-		if sinceID != 0 {
-			since = fmt.Sprintf("id >= %d", sinceID)
-		}
-		if maxID != 0 && sinceID != 0 {
-			and = "AND"
-		}
-	}
-
-	query := fmt.Sprintf(`SELECT * FROM status %s %s %s %s LIMIT %d`, where, max, and, since, limit)
+	idRange, _ := BuildRangeQuery("id", maxID, sinceID, 0)
+	query := fmt.Sprintf(`SELECT * FROM status %s LIMIT %d`, idRange, limit)
 
 	rows, err := r.db.QueryxContext(ctx, query)
 	if err != nil {
@@ -114,9 +99,12 @@ func (r *status) List(ctx context.Context, maxID, sinceID, limit int64) ([]objec
 	for rows.Next() {
 		err := rows.StructScan(&status)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 		statusList = append(statusList, status)
+	}
+	if rows.Err() != nil {
+		return nil, err
 	}
 
 	return statusList, nil
