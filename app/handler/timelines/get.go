@@ -2,25 +2,17 @@ package timelines
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
 	"net/http"
-	"strconv"
 	"yatter-backend-go/app/domain/object"
 	"yatter-backend-go/app/handler/httperror"
+	"yatter-backend-go/app/handler/request"
 )
 
 type ListRequest struct {
 	MaxID   int64
 	SinceID int64
 	Limit   int64
-}
-
-type Option struct {
-	name         string
-	defaultValue int64
-	min          int64
-	max          int64
 }
 
 // Handle request for `GET /v1/timelines/public`
@@ -33,12 +25,12 @@ func (h *handler) Get(w http.ResponseWriter, r *http.Request) {
 		limit   = "limit"
 	)
 
-	options := []Option{
+	options := []request.Option{
 		{maxID, 0, 1, math.MaxInt64},
 		{sinceID, 0, 1, math.MaxInt64},
 		{limit, 40, 0, 80},
 	}
-	params, err := getOptionParams(r, options)
+	params, err := request.GetOptionParams(r, options)
 	if err != nil {
 		httperror.BadRequest(w, err)
 		return
@@ -80,34 +72,4 @@ func (h *handler) Get(w http.ResponseWriter, r *http.Request) {
 		httperror.InternalServerError(w, err)
 		return
 	}
-}
-
-func getOptionParams(r *http.Request, options []Option) (map[string]int64, error) {
-	params := make(map[string]int64)
-	var err error
-
-	for _, op := range options {
-		params[op.name], err = paramOf(r.URL.Query().Get(string(op.name)), op.defaultValue, op.min, op.max)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return params, nil
-}
-
-func paramOf(strParam string, defaultValue, min, max int64) (int64, error) {
-	if strParam == "" {
-		return defaultValue, nil
-	}
-
-	param, err := strconv.ParseInt(strParam, 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("%q is invalid format for option", strParam)
-	}
-	if param < min || max < param {
-		return 0, fmt.Errorf("%d is over valid range [%d, %d]", param, min, max)
-	}
-
-	return param, nil
 }
