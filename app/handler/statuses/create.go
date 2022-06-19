@@ -11,7 +11,7 @@ import (
 
 // Request body for `POST /v1/statuses`
 type AddRequest struct {
-	Content string
+	Status string
 }
 
 // Handle request for `POST /v1/statuses`
@@ -31,7 +31,7 @@ func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	status := &object.Status{
-		Content: req.Content,
+		Content: req.Status,
 		Account: *account,
 	}
 
