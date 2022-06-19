@@ -11,19 +11,13 @@ import (
 	"github.com/go-chi/chi"
 )
 
-type FollowResponse struct {
-	ID         int64 `json:"id"`
-	Following  bool  `json:"following"`
-	FollowedBy bool  `json:"followed_by"`
-}
-
-func (h *handler) Follow(w http.ResponseWriter, r *http.Request) {
+func (h *handler) Unfollow(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	follower := auth.AccountOf(r)
 	username := chi.URLParam(r, "username")
 	if username == follower.Username {
-		httperror.BadRequest(w, errors.New("following yourself is forbidden"))
+		httperror.BadRequest(w, errors.New("unfollowing yourself is forbidden"))
 		return
 	}
 
@@ -33,11 +27,11 @@ func (h *handler) Follow(w http.ResponseWriter, r *http.Request) {
 		httperror.BadRequest(w, err)
 		return
 	} else if followee == nil {
-		httperror.BadRequest(w, fmt.Errorf("%s you want to follow is not found", username))
+		httperror.BadRequest(w, fmt.Errorf("%s you want to unfollow is not found", username))
 		return
 	}
 
-	id, followedBy, err := repo.Follow(ctx, follower.ID, followee.ID)
+	id, followedBy, err := repo.Unfollow(ctx, follower.ID, followee.ID)
 	if err != nil {
 		httperror.InternalServerError(w, err)
 		return
@@ -45,7 +39,7 @@ func (h *handler) Follow(w http.ResponseWriter, r *http.Request) {
 
 	res := &FollowResponse{
 		ID:         id,
-		Following:  true,
+		Following:  false,
 		FollowedBy: followedBy,
 	}
 	w.Header().Set("Content-Type", "application/json")

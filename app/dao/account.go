@@ -115,6 +115,52 @@ func (r *account) Follow(ctx context.Context, followerID, followeeID int64) (int
 	return id, followedBy, nil
 }
 
+// Unfollow : アカウントのフォロー解除
+func (r *account) Unfollow(ctx context.Context, followerID, followeeID int64) (int64, bool, error) {
+	var id int64
+	var followedBy bool
+	var empty struct{ I, J, K int64 }
+
+	err := r.Transaction(func(tx *sqlx.Tx) error {
+		const following = `SELECT * FROM follow WHERE follower_id = ? AND followee_id = ?`
+		if err := r.db.QueryRowxContext(ctx, following, followerID, followeeID).Scan(&id, &empty.J, &empty.K); err != nil {
+			return err
+		}
+
+		const unfollow = `DELETE FROM follow WHERE follower_id = ? AND followee_id = ?`
+		_, err := tx.ExecContext(ctx, unfollow, followerID, followeeID)
+		if err != nil {
+			return err
+		}
+
+		if err := r.manageNumberOfFollows(ctx, tx, followerID, "following_count", -1); err != nil {
+			return err
+		}
+		if err := r.manageNumberOfFollows(ctx, tx, followeeID, "followers_count", -1); err != nil {
+			return err
+		}
+
+		const followed = `SELECT * FROM follow WHERE follower_id = ? AND followee_id = ?`
+		if err := r.db.QueryRowxContext(ctx, followed, followeeID, followerID).Scan(&empty.I, &empty.J, &empty.K); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				followedBy = false
+			} else {
+				return err
+			}
+		} else {
+			followedBy = true
+		}
+
+		return nil
+	})
+	if err != nil {
+		return 0, false, err
+	}
+
+	return id, followedBy, nil
+}
+
+// Manage number of follower count and following count
 func (r *account) manageNumberOfFollows(ctx context.Context, tx *sqlx.Tx, id int64, column string, number int64) error {
 	var operator string
 	if number == 0 {
