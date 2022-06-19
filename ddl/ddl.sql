@@ -31,5 +31,6 @@ CREATE TABLE `follow` (
   -- INDEX `idx_followee_id` (`followee_id`),
   CONSTRAINT `fk_follower_account_id` FOREIGN KEY (`follower_id`) REFERENCES  `account` (`id`),
   CONSTRAINT `fk_followee_account_id` FOREIGN KEY (`followee_id`) REFERENCES  `account` (`id`),
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE follow_combination (follower_id, followee_id)
 );
