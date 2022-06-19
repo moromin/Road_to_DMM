@@ -17,8 +17,11 @@ type Account interface {
 	CreateAccount(ctx context.Context, username, password string) error
 
 	// Follow an account
-	Follow(ctx context.Context, follower_id, followee_id int64) (int64, bool, error)
+	Follow(ctx context.Context, followerID, followeeID int64) (int64, bool, error)
 
 	// Fetch accounts that followed by follower
-	FindFollowing(ctx context.Context, follower_id, limit int64) ([]object.Account, error)
+	FindFollowing(ctx context.Context, followerID, limit int64) ([]object.Account, error)
+
+	// Fetch accounts that following followee
+	FindFollowers(ctx context.Context, followeeID, maxID, sinceID, limit int64) ([]object.Account, error)
 }

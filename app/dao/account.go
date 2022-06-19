@@ -72,13 +72,13 @@ func (r *account) CreateAccount(ctx context.Context, username, password string) 
 }
 
 // Follow : アカウントをフォロー
-func (r *account) Follow(ctx context.Context, follower_id, followee_id int64) (int64, bool, error) {
+func (r *account) Follow(ctx context.Context, followerID, followeeID int64) (int64, bool, error) {
 	var id int64
 	var followedBy bool
 
 	err := r.Transaction(func(tx *sqlx.Tx) error {
 		const follow = `INSERT INTO follow (follower_id, followee_id) VALUES (?, ?)`
-		res, err := tx.ExecContext(ctx, follow, follower_id, followee_id)
+		res, err := tx.ExecContext(ctx, follow, followerID, followeeID)
 		if err != nil {
 			return err
 		}
@@ -87,16 +87,16 @@ func (r *account) Follow(ctx context.Context, follower_id, followee_id int64) (i
 			return err
 		}
 
-		if err := r.manageNumberOfFollows(ctx, tx, follower_id, "following_count", 1); err != nil {
+		if err := r.manageNumberOfFollows(ctx, tx, followerID, "following_count", 1); err != nil {
 			return err
 		}
-		if err := r.manageNumberOfFollows(ctx, tx, followee_id, "followers_count", 1); err != nil {
+		if err := r.manageNumberOfFollows(ctx, tx, followeeID, "followers_count", 1); err != nil {
 			return err
 		}
 
 		const followed = `SELECT * FROM follow WHERE follower_id = ? AND followee_id = ?`
 		empty := struct{ I, J, K int64 }{}
-		if err := r.db.QueryRowxContext(ctx, followed, followee_id, follower_id).Scan(&empty.I, &empty.J, &empty.K); err != nil {
+		if err := r.db.QueryRowxContext(ctx, followed, followeeID, followerID).Scan(&empty.I, &empty.J, &empty.K); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				followedBy = false
 			} else {
@@ -154,8 +154,6 @@ func (r *account) Transaction(txFunc func(*sqlx.Tx) error) error {
 }
 
 func (r *account) FindFollowing(ctx context.Context, follower_id, limit int64) ([]object.Account, error) {
-	accounts := make([]object.Account, 0)
-
 	query := `SELECT a.*
 				FROM follow as f
 				JOIN account as a
@@ -169,6 +167,7 @@ func (r *account) FindFollowing(ctx context.Context, follower_id, limit int64) (
 	}
 	defer rows.Close()
 
+	accounts := make([]object.Account, 0)
 	for rows.Next() {
 		account := object.Account{}
 		err := rows.StructScan(&account)
@@ -177,7 +176,45 @@ func (r *account) FindFollowing(ctx context.Context, follower_id, limit int64) (
 		}
 		accounts = append(accounts, account)
 	}
-	if rows.Err() != nil {
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return accounts, nil
+}
+
+func (r *account) FindFollowers(ctx context.Context, followeeID, maxID, sinceID, limit int64) ([]object.Account, error) {
+	connection := ""
+
+	idRange, ok := BuildRangeQuery("a.id", maxID, sinceID, 0)
+	if ok {
+		connection = "AND"
+	} else {
+		connection = "WHERE"
+	}
+	query := fmt.Sprintf(`SELECT a.*
+								FROM follow as f
+								JOIN account as a
+								ON f.follower_id = a.id
+								%s %s followee_id = %d
+								LIMIT %d`, idRange, connection, followeeID, limit)
+
+	rows, err := r.db.QueryxContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	accounts := make([]object.Account, 0)
+	for rows.Next() {
+		account := object.Account{}
+		err := rows.StructScan(&account)
+		if err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, account)
+	}
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
