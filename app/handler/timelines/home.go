@@ -36,8 +36,8 @@ func (h *handler) Home(w http.ResponseWriter, r *http.Request) {
 		Limit:   params[limit],
 	}
 
-	statusRepo := h.app.Dao.Status()
-	statuses, err := statusRepo.ListByID(ctx, account.ID, req.MaxID, req.SinceID, req.Limit)
+	repo := h.app.Dao.Status()
+	statuses, err := repo.ListByID(ctx, account.ID, req.MaxID, req.SinceID, req.Limit)
 	if err != nil {
 		httperror.InternalServerError(w, err)
 	} else if statuses == nil {

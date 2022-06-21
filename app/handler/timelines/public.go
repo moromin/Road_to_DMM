@@ -40,8 +40,8 @@ func (h *handler) Public(w http.ResponseWriter, r *http.Request) {
 		Limit:   params[limit],
 	}
 
-	statusRepo := h.app.Dao.Status()
-	statuses, err := statusRepo.ListAll(ctx, req.MaxID, req.SinceID, req.Limit)
+	repo := h.app.Dao.Status()
+	statuses, err := repo.ListAll(ctx, req.MaxID, req.SinceID, req.Limit)
 	if err != nil {
 		httperror.InternalServerError(w, err)
 		return
