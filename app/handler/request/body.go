@@ -6,6 +6,13 @@ import (
 	"regexp"
 )
 
+const (
+	Image   string = "image"
+	Gifv    string = "gifv"
+	Video   string = "video"
+	Unknown string = "unknown"
+)
+
 func DetectAttachmentType(file io.ReadSeeker) (string, error) {
 	buff := make([]byte, 512)
 	if _, err := file.Read(buff); err != nil {
@@ -26,11 +33,11 @@ var videoType = regexp.MustCompile("video/*")
 
 func classifyFiletype(filetype string) string {
 	if filetype == "image/gif" {
-		return "gifv"
+		return Gifv
 	} else if imageType.MatchString(filetype) {
-		return "image"
+		return Image
 	} else if videoType.MatchString(filetype) {
-		return "video"
+		return Video
 	}
-	return "unknown"
+	return Unknown
 }
