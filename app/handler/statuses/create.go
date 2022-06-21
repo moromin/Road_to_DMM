@@ -2,9 +2,7 @@ package statuses
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
-	"yatter-backend-go/app/domain/object"
 	"yatter-backend-go/app/handler/auth"
 	"yatter-backend-go/app/handler/httperror"
 )
@@ -25,23 +23,19 @@ func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	account := auth.AccountOf(r)
-	if account == nil {
-		httperror.InternalServerError(w, errors.New("failed to read ID"))
-		return
-	}
-
-	status := &object.Status{
-		Content: req.Status,
-		Account: *account,
-	}
 
 	statusRepo := h.app.Dao.Status()
-	id, err := statusRepo.Create(ctx, status.Account.ID, status.Content)
+	id, err := statusRepo.Create(ctx, account.ID, req.Status)
 	if err != nil {
 		httperror.InternalServerError(w, err)
 		return
 	}
-	status.ID = id
+	status, err := statusRepo.FindByID(ctx, id)
+	if err != nil || status == nil {
+		httperror.InternalServerError(w, err)
+		return
+	}
+	status.Account = *account
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(status); err != nil {
