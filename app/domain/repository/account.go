@@ -22,6 +22,9 @@ type Account interface {
 	// Unfollow an account
 	Unfollow(ctx context.Context, followerID, followeeID int64) (int64, bool, error)
 
+	// Account relationship about follow
+	FindRelationship(ctx context.Context, userID, targetID int64) (bool, bool, error)
+
 	// Fetch accounts that followed by follower
 	FindFollowing(ctx context.Context, followerID, limit int64) ([]object.Account, error)
 

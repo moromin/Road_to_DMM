@@ -199,6 +199,34 @@ func (r *account) Transaction(txFunc func(*sqlx.Tx) error) error {
 	return err
 }
 
+func (r *account) FindRelationship(ctx context.Context, userID, targetID int64) (bool, bool, error) {
+	following, err := r.findRelationship(ctx, userID, targetID)
+	if err != nil {
+		return false, false, err
+	}
+
+	followedBy, err := r.findRelationship(ctx, targetID, userID)
+	if err != nil {
+		return false, false, err
+	}
+
+	return following, followedBy, nil
+}
+
+func (r *account) findRelationship(ctx context.Context, followerID, followeeID int64) (bool, error) {
+	const query = `SELECT * FROM follow WHERE follower_id = ? AND followee_id = ?`
+	var empty struct{ I, J, K int64 }
+
+	if err := r.db.QueryRowxContext(ctx, query, followerID, followeeID).Scan(&empty.I, &empty.J, &empty.K); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
 func (r *account) FindFollowing(ctx context.Context, follower_id, limit int64) ([]object.Account, error) {
 	query := `SELECT a.*
 				FROM follow as f

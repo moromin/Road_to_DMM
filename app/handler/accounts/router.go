@@ -20,16 +20,17 @@ func NewRouter(app *app.App) http.Handler {
 
 	h := &handler{app: app}
 
-	r.Post("/", h.Create)
-	r.Get("/{username}", h.Get)
-	r.Get("/{username}/following", h.Following)
-	r.Get("/{username}/followers", h.Followers)
-
 	r.Route("/", func(r chi.Router) {
 		r.Use(auth.BasicAuth(h.app))
 		r.Post("/{username}/follow", h.Follow)
 		r.Post("/{username}/unfollow", h.Unfollow)
 	})
+	r.With(auth.BasicAuth(h.app)).Get("/relationships", h.Relationships)
+
+	r.Post("/", h.Create)
+	r.Get("/{username}", h.Get)
+	r.Get("/{username}/following", h.Following)
+	r.Get("/{username}/followers", h.Followers)
 
 	return r
 }
