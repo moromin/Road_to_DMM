@@ -73,17 +73,12 @@ func (r *account) CreateAccount(ctx context.Context, username, password string) 
 
 // Follow : アカウントをフォロー
 func (r *account) Follow(ctx context.Context, followerID, followeeID int64) (int64, bool, error) {
-	var id int64
 	var followedBy bool
 
 	err := r.Transaction(func(tx *sqlx.Tx) error {
+		var err error
 		const follow = `INSERT INTO follow (follower_id, followee_id) VALUES (?, ?)`
-		res, err := tx.ExecContext(ctx, follow, followerID, followeeID)
-		if err != nil {
-			return err
-		}
-		id, err = res.LastInsertId()
-		if err != nil {
+		if _, err := tx.ExecContext(ctx, follow, followerID, followeeID); err != nil {
 			return err
 		}
 
@@ -94,16 +89,8 @@ func (r *account) Follow(ctx context.Context, followerID, followeeID int64) (int
 			return err
 		}
 
-		const followed = `SELECT * FROM follow WHERE follower_id = ? AND followee_id = ?`
-		empty := struct{ I, J, K int64 }{}
-		if err := r.db.QueryRowxContext(ctx, followed, followeeID, followerID).Scan(&empty.I, &empty.J, &empty.K); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				followedBy = false
-			} else {
-				return err
-			}
-		} else {
-			followedBy = true
+		if followedBy, err = r.findRelationship(ctx, followeeID, followerID); err != nil {
+			return err
 		}
 
 		return nil
@@ -112,24 +99,23 @@ func (r *account) Follow(ctx context.Context, followerID, followeeID int64) (int
 		return 0, false, err
 	}
 
-	return id, followedBy, nil
+	return followeeID, followedBy, nil
 }
 
 // Unfollow : アカウントのフォロー解除
 func (r *account) Unfollow(ctx context.Context, followerID, followeeID int64) (int64, bool, error) {
-	var id int64
 	var followedBy bool
 	var empty struct{ I, J, K int64 }
 
 	err := r.Transaction(func(tx *sqlx.Tx) error {
+		var err error
 		const following = `SELECT * FROM follow WHERE follower_id = ? AND followee_id = ?`
-		if err := r.db.QueryRowxContext(ctx, following, followerID, followeeID).Scan(&id, &empty.J, &empty.K); err != nil {
+		if err := r.db.QueryRowxContext(ctx, following, followerID, followeeID).Scan(&empty.I, &empty.J, &empty.K); err != nil {
 			return err
 		}
 
 		const unfollow = `DELETE FROM follow WHERE follower_id = ? AND followee_id = ?`
-		_, err := tx.ExecContext(ctx, unfollow, followerID, followeeID)
-		if err != nil {
+		if _, err := tx.ExecContext(ctx, unfollow, followerID, followeeID); err != nil {
 			return err
 		}
 
@@ -140,15 +126,8 @@ func (r *account) Unfollow(ctx context.Context, followerID, followeeID int64) (i
 			return err
 		}
 
-		const followed = `SELECT * FROM follow WHERE follower_id = ? AND followee_id = ?`
-		if err := r.db.QueryRowxContext(ctx, followed, followeeID, followerID).Scan(&empty.I, &empty.J, &empty.K); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				followedBy = false
-			} else {
-				return err
-			}
-		} else {
-			followedBy = true
+		if followedBy, err = r.findRelationship(ctx, followeeID, followerID); err != nil {
+			return err
 		}
 
 		return nil
@@ -157,7 +136,7 @@ func (r *account) Unfollow(ctx context.Context, followerID, followeeID int64) (i
 		return 0, false, err
 	}
 
-	return id, followedBy, nil
+	return followeeID, followedBy, nil
 }
 
 // Manage number of follower count and following count
