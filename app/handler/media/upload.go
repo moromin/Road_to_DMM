@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"regexp"
 	"unicode/utf8"
 	"yatter-backend-go/app/handler/httperror"
+	"yatter-backend-go/app/handler/request"
 )
 
 const maxDescriptionLength = 420
@@ -31,7 +30,7 @@ func (h *handler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	filetype, err := detectContentType(file)
+	filetype, err := request.DetectAttachmentType(file)
 	if err != nil {
 		httperror.InternalServerError(w, err)
 		return
@@ -48,33 +47,4 @@ func (h *handler) Upload(w http.ResponseWriter, r *http.Request) {
 		httperror.InternalServerError(w, err)
 		return
 	}
-}
-
-func detectContentType(file io.ReadSeeker) (string, error) {
-	buff := make([]byte, 512)
-	if _, err := file.Read(buff); err != nil {
-		return "", err
-	}
-
-	filetype := http.DetectContentType(buff)
-
-	if _, err := file.Seek(0, io.SeekStart); err != nil {
-		return "", err
-	}
-
-	return classifyFiletype(filetype), nil
-}
-
-var imageType = regexp.MustCompile("image/*")
-var videoType = regexp.MustCompile("video/*")
-
-func classifyFiletype(filetype string) string {
-	if filetype == "image/gif" {
-		return "gifv"
-	} else if imageType.MatchString(filetype) {
-		return "image"
-	} else if videoType.MatchString(filetype) {
-		return "video"
-	}
-	return "unknown"
 }
