@@ -34,3 +34,11 @@ CREATE TABLE `follow` (
   PRIMARY KEY (`id`),
   UNIQUE follow_combination (follower_id, followee_id)
 );
+
+CREATE TABLE `attachment` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `type` text NOT NULL,
+  `url` text NOT NULL,
+  `display_name` varchar(240),
+  PRIMARY KEY (`id`)
+);

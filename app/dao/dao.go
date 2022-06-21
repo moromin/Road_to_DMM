@@ -45,6 +45,10 @@ func (d *dao) Status() repository.Status {
 	return NewStatus(d.db)
 }
 
+func (d *dao) Attachment() repository.Attachment {
+	return NewAttachment(d.db)
+}
+
 func (d *dao) InitAll() error {
 	if err := d.exec("SET FOREIGN_KEY_CHECKS=0"); err != nil {
 		return fmt.Errorf("Can't disable FOREIGN_KEY_CHECKS: %w", err)

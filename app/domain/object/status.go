@@ -19,4 +19,5 @@ type Status struct {
 
 	// The attachment of status
 	// media_attachments Attachment
+	MediaAttachments []Attachment `json:"media_attachments,omitempty"`
 }
