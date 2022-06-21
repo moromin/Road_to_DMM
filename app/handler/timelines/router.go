@@ -3,6 +3,7 @@ package timelines
 import (
 	"net/http"
 	"yatter-backend-go/app/app"
+	"yatter-backend-go/app/handler/auth"
 
 	"github.com/go-chi/chi"
 )
@@ -16,7 +17,12 @@ func NewRouter(app *app.App) http.Handler {
 
 	h := &handler{app: app}
 
-	r.Get("/public", h.Get)
+	r.Get("/public", h.Public)
+
+	r.Route("/", func(r chi.Router) {
+		r.Use(auth.BasicAuth(h.app))
+		r.Get("/home", h.Home)
+	})
 
 	return r
 }

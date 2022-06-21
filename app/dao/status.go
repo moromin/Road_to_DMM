@@ -81,11 +81,46 @@ func (r *status) DeleteByID(ctx context.Context, id int64) error {
 	return nil
 }
 
-// List : maxID, sinceID, limit からタイムライン（ステータスのスライス）を取得
-func (r *status) List(ctx context.Context, maxID, sinceID, limit int64) ([]object.Status, error) {
+// ListAll : maxID, sinceID, limit からタイムライン（ステータスのスライス）を取得
+func (r *status) ListAll(ctx context.Context, maxID, sinceID, limit int64) ([]object.Status, error) {
 	idRange, _ := BuildRangeQuery("id", maxID, sinceID, 0)
 	query := fmt.Sprintf(`SELECT * FROM status %s LIMIT %d`, idRange, limit)
 
+	rows, err := r.db.QueryxContext(ctx, query)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var statusList []object.Status
+	var status object.Status
+	for rows.Next() {
+		err := rows.StructScan(&status)
+		if err != nil {
+			return nil, err
+		}
+		statusList = append(statusList, status)
+	}
+	if rows.Err() != nil {
+		return nil, err
+	}
+
+	return statusList, nil
+}
+
+// ListByID : 認証されたアカウントのID, maxID, sinceID, limit からタイムライン（ステータスのスライス）を取得
+func (r *status) ListByID(ctx context.Context, id, maxID, sinceID, limit int64) ([]object.Status, error) {
+	connection := ""
+	idRange, ok := BuildRangeQuery("id", maxID, sinceID, 0)
+	if ok {
+		connection = "AND"
+	} else {
+		connection = "WHERE"
+	}
+	query := fmt.Sprintf(`SELECT * FROM status %s %s account_id = %d LIMIT %d`, idRange, connection, id, limit)
+	fmt.Println(query)
 	rows, err := r.db.QueryxContext(ctx, query)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

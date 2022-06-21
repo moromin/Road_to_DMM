@@ -16,7 +16,7 @@ type ListRequest struct {
 }
 
 // Handle request for `GET /v1/timelines/public`
-func (h *handler) Get(w http.ResponseWriter, r *http.Request) {
+func (h *handler) Public(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	const (
@@ -42,9 +42,9 @@ func (h *handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	statusRepo := h.app.Dao.Status()
-	statuses, err := statusRepo.List(ctx, req.MaxID, req.SinceID, req.Limit)
+	statuses, err := statusRepo.ListAll(ctx, req.MaxID, req.SinceID, req.Limit)
 	if err != nil {
-		httperror.BadRequest(w, err)
+		httperror.InternalServerError(w, err)
 		return
 	} else if statuses == nil {
 		httperror.Error(w, http.StatusNotFound)
