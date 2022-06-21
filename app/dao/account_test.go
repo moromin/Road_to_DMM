@@ -103,7 +103,7 @@ func Test_account_FindByUsername(t *testing.T) {
 func Test_account_FindByID(t *testing.T) {
 	type args struct {
 		ctx context.Context
-		id  int
+		id  int64
 	}
 
 	query := `select * from account where id = ?`
@@ -142,7 +142,7 @@ func Test_account_FindByID(t *testing.T) {
 			},
 			args: args{
 				ctx: context.Background(),
-				id:  int(want.ID),
+				id:  want.ID,
 			},
 			want:      want,
 			assertion: assert.NoError,
@@ -155,7 +155,7 @@ func Test_account_FindByID(t *testing.T) {
 			},
 			args: args{
 				ctx: context.Background(),
-				id:  int(want.ID),
+				id:  want.ID,
 			},
 			want:      nil,
 			assertion: assert.Error,

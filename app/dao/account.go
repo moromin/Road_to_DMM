@@ -39,7 +39,7 @@ func (r *account) FindByUsername(ctx context.Context, username string) (*object.
 }
 
 // FindByUsername : IDからユーザを取得
-func (r *account) FindByID(ctx context.Context, id int) (*object.Account, error) {
+func (r *account) FindByID(ctx context.Context, id int64) (*object.Account, error) {
 	entity := new(object.Account)
 	query := `select *
 			  from account
@@ -271,4 +271,8 @@ func (r *account) FindFollowers(ctx context.Context, followeeID, maxID, sinceID,
 	}
 
 	return accounts, nil
+}
+
+func (r *account) UpdateCredentials(ctx context.Context, id int64, displayName, note, avatar, header string) error {
+	return nil
 }

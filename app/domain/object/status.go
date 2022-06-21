@@ -6,7 +6,7 @@ type Status struct {
 	ID int64 `json:"id"`
 
 	// The internal ID of the account who posted status
-	AccountID int `json:"-" db:"account_id"`
+	AccountID int64 `json:"-" db:"account_id"`
 
 	// The account of posting status
 	Account Account `json:"account"`
