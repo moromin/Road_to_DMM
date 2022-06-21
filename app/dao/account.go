@@ -178,6 +178,7 @@ func (r *account) Transaction(txFunc func(*sqlx.Tx) error) error {
 	return err
 }
 
+// FindRelationship : 指定したアカウントとのフォロー関係を取得する
 func (r *account) FindRelationship(ctx context.Context, userID, targetID int64) (bool, bool, error) {
 	following, err := r.findRelationship(ctx, userID, targetID)
 	if err != nil {
@@ -206,6 +207,7 @@ func (r *account) findRelationship(ctx context.Context, followerID, followeeID i
 	return true, nil
 }
 
+// FindFollowing : フォローしているアカウント情報を取得する
 func (r *account) FindFollowing(ctx context.Context, follower_id, limit int64) ([]object.Account, error) {
 	query := `SELECT a.*
 				FROM follow as f
@@ -236,6 +238,7 @@ func (r *account) FindFollowing(ctx context.Context, follower_id, limit int64) (
 	return accounts, nil
 }
 
+// FindFollowers : フォローされているアカウント情報を取得する
 func (r *account) FindFollowers(ctx context.Context, followeeID, maxID, sinceID, limit int64) ([]object.Account, error) {
 	connection := ""
 	idRange, ok := BuildRangeQuery("a.id", maxID, sinceID, 0)
@@ -273,6 +276,31 @@ func (r *account) FindFollowers(ctx context.Context, followeeID, maxID, sinceID,
 	return accounts, nil
 }
 
+// UpdateCredentials : アカウントの経歴を更新する
 func (r *account) UpdateCredentials(ctx context.Context, id int64, displayName, note, avatar, header string) error {
-	return nil
+	var columns string
+
+	credentials := map[string]string{
+		"display_name": displayName,
+		"note":         note,
+		"avatar":       avatar,
+		"header":       header,
+	}
+
+	for name, value := range credentials {
+		if value == "" {
+			continue
+		}
+		if columns != "" {
+			columns += ", "
+		}
+		columns += fmt.Sprintf("%s = %q", name, value)
+	}
+	if columns == "" {
+		return nil
+	}
+
+	query := fmt.Sprintf("UPDATE account SET %s WHERE id = %d", columns, id)
+	_, err := r.db.ExecContext(ctx, query)
+	return err
 }

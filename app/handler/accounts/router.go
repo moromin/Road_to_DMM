@@ -26,6 +26,7 @@ func NewRouter(app *app.App) http.Handler {
 		r.Post("/{username}/unfollow", h.Unfollow)
 	})
 	r.With(auth.BasicAuth(h.app)).Get("/relationships", h.Relationships)
+	r.With(auth.BasicAuth(h.app)).Post("/update_credentials", h.UpdateCredentials)
 
 	r.Post("/", h.Create)
 	r.Get("/{username}", h.Get)

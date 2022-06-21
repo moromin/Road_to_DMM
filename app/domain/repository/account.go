@@ -11,7 +11,7 @@ type Account interface {
 	FindByUsername(ctx context.Context, username string) (*object.Account, error)
 
 	// Fetch account which has specified ID
-	FindByID(ctx context.Context, id int) (*object.Account, error)
+	FindByID(ctx context.Context, id int64) (*object.Account, error)
 
 	// Create an account which has specified username and password
 	CreateAccount(ctx context.Context, username, password string) error
@@ -30,4 +30,7 @@ type Account interface {
 
 	// Fetch accounts that following followee
 	FindFollowers(ctx context.Context, followeeID, maxID, sinceID, limit int64) ([]object.Account, error)
+
+	// Update credentials
+	UpdateCredentials(ctx context.Context, id int64, displayName, note, avatar, header string) error
 }
