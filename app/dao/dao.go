@@ -17,6 +17,9 @@ type (
 		// Get status repository
 		Status() repository.Status
 
+		// Get attachment repository
+		Attachment() repository.Attachment
+
 		// Clear all data in DB
 		InitAll() error
 	}

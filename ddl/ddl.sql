@@ -39,6 +39,6 @@ CREATE TABLE `attachment` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `type` text NOT NULL,
   `url` text NOT NULL,
-  `display_name` varchar(240),
+  `description` varchar(420),
   PRIMARY KEY (`id`)
 );

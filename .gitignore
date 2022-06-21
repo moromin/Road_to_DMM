@@ -18,5 +18,7 @@
 /build/
 /.data/
 
+files/
+
 # VSCode
 thunder-tests
