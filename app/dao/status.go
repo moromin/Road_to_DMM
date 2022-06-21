@@ -83,8 +83,14 @@ func (r *status) DeleteByID(ctx context.Context, id int64) error {
 
 // ListAll : maxID, sinceID, limit からタイムライン（ステータスのスライス）を取得
 func (r *status) ListAll(ctx context.Context, maxID, sinceID, limit int64) ([]object.Status, error) {
-	idRange, _ := BuildRangeQuery("id", maxID, sinceID, 0)
-	query := fmt.Sprintf(`SELECT * FROM status %s LIMIT %d`, idRange, limit)
+	idRange, _ := BuildRangeQuery("s.id", maxID, sinceID, 0)
+	query := fmt.Sprintf(`SELECT s.*, a.username AS "account.username", a.followers_count AS "account.followers_count", a.following_count AS "account.following_count", a.create_at AS "account.create_at"
+							FROM status as s
+							JOIN account as a
+							on s.account_id = a.id
+							%s
+							ORDER BY s.id
+							LIMIT %d`, idRange, limit)
 
 	rows, err := r.db.QueryxContext(ctx, query)
 	if err != nil {

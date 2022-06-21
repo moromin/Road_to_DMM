@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"math"
 	"net/http"
-	"yatter-backend-go/app/domain/object"
 	"yatter-backend-go/app/handler/httperror"
 	"yatter-backend-go/app/handler/request"
 )
@@ -49,22 +48,6 @@ func (h *handler) Public(w http.ResponseWriter, r *http.Request) {
 	} else if statuses == nil {
 		httperror.Error(w, http.StatusNotFound)
 		return
-	}
-
-	// TODO: delete this to solve N + 1 problem
-	accounts := make(map[int]*object.Account)
-	accountRepo := h.app.Dao.Account()
-	for i, status := range statuses {
-		account, ok := accounts[status.AccountID]
-		if !ok {
-			account, err = accountRepo.FindByID(ctx, status.AccountID)
-			if err != nil {
-				httperror.BadRequest(w, err)
-				return
-			}
-			accounts[status.AccountID] = account
-		}
-		statuses[i].Account = *account
 	}
 
 	w.Header().Set("Content-Type", "application/json")
