@@ -238,7 +238,6 @@ func (r *account) FindFollowing(ctx context.Context, follower_id, limit int64) (
 
 func (r *account) FindFollowers(ctx context.Context, followeeID, maxID, sinceID, limit int64) ([]object.Account, error) {
 	connection := ""
-
 	idRange, ok := BuildRangeQuery("a.id", maxID, sinceID, 0)
 	if ok {
 		connection = "AND"

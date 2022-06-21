@@ -5,6 +5,7 @@ import "fmt"
 // BuildRangeQuery returns query string and query exists or not
 func BuildRangeQuery(column string, max, since, invalid int64) (string, bool) {
 	var where, maxQuery, sinceQuery, and string
+	var query string
 
 	if max != invalid || since != invalid {
 		where = "WHERE"
@@ -17,9 +18,9 @@ func BuildRangeQuery(column string, max, since, invalid int64) (string, bool) {
 		if max != invalid && since != invalid {
 			and = "AND"
 		}
+		query = fmt.Sprintf("%s %s %s %s", where, maxQuery, and, sinceQuery)
 	}
 
-	query := fmt.Sprintf("%s %s %s %s", where, maxQuery, and, sinceQuery)
 	exist := (query != "")
 
 	return query, exist
