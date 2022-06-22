@@ -89,16 +89,26 @@ func (r *status) FindByID(ctx context.Context, id int64) (*object.Status, error)
 		return nil, err
 	}
 
-	const findAttachments = `SELECT a.*
-							FROM status_attachment as sa
-							JOIN attachment as a
-							ON sa.attachment_id = a.id
-							WHERE sa.status_id = ?`
-	if err := r.db.SelectContext(ctx, &status.MediaAttachments, findAttachments, id); err != nil {
+	attachments, err := r.findAttachments(ctx, id)
+	if err != nil {
 		return nil, err
 	}
+	status.MediaAttachments = attachments
 
 	return status, nil
+}
+
+func (r *status) findAttachments(ctx context.Context, id int64) ([]object.Attachment, error) {
+	const query = `SELECT a.*
+					FROM status_attachment as sa
+					JOIN attachment as a
+					ON sa.attachment_id = a.id
+					WHERE sa.status_id = ?`
+	attachments := []object.Attachment{}
+	if err := r.db.SelectContext(ctx, &attachments, query, id); err != nil {
+		return nil, err
+	}
+	return attachments, nil
 }
 
 // DeleteByID : IDからステータスを削除
@@ -124,36 +134,30 @@ func (r *status) DeleteByID(ctx context.Context, id int64) error {
 // ListAll : maxID, sinceID, limit からタイムライン（ステータスのスライス）を取得
 func (r *status) ListAll(ctx context.Context, maxID, sinceID, limit int64) ([]object.Status, error) {
 	idRange, _ := BuildRangeQuery("s.id", maxID, sinceID, 0)
-	query := fmt.Sprintf(`SELECT s.*, a.username AS "account.username", a.followers_count AS "account.followers_count", a.following_count AS "account.following_count", a.create_at AS "account.create_at"
+	listAll := fmt.Sprintf(`SELECT s.*, a.username AS "account.username", a.followers_count AS "account.followers_count", a.following_count AS "account.following_count", a.create_at AS "account.create_at"
 							FROM status as s
 							JOIN account as a
 							on s.account_id = a.id
 							%s
 							ORDER BY s.id
 							LIMIT %d`, idRange, limit)
-
-	rows, err := r.db.QueryxContext(ctx, query)
-	if err != nil {
+	statuses := []object.Status{}
+	if err := r.db.SelectContext(ctx, &statuses, listAll); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err
 	}
 
-	var statusList []object.Status
-	var status object.Status
-	for rows.Next() {
-		err := rows.StructScan(&status)
+	for i, status := range statuses {
+		attachments, err := r.findAttachments(ctx, status.ID)
 		if err != nil {
 			return nil, err
 		}
-		statusList = append(statusList, status)
-	}
-	if rows.Err() != nil {
-		return nil, err
+		statuses[i].MediaAttachments = attachments
 	}
 
-	return statusList, nil
+	return statuses, nil
 }
 
 // ListByID : 認証されたアカウントのID, maxID, sinceID, limit からタイムライン（ステータスのスライス）を取得
@@ -165,28 +169,22 @@ func (r *status) ListByID(ctx context.Context, id, maxID, sinceID, limit int64) 
 	} else {
 		connection = "WHERE"
 	}
-	query := fmt.Sprintf(`SELECT * FROM status %s %s account_id = %d LIMIT %d`, idRange, connection, id, limit)
-	fmt.Println(query)
-	rows, err := r.db.QueryxContext(ctx, query)
-	if err != nil {
+	listByID := fmt.Sprintf(`SELECT * FROM status %s %s account_id = %d LIMIT %d`, idRange, connection, id, limit)
+	statuses := []object.Status{}
+	if err := r.db.SelectContext(ctx, &statuses, listByID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("%w", err)
-	}
-
-	var statusList []object.Status
-	var status object.Status
-	for rows.Next() {
-		err := rows.StructScan(&status)
-		if err != nil {
-			return nil, err
-		}
-		statusList = append(statusList, status)
-	}
-	if rows.Err() != nil {
 		return nil, err
 	}
 
-	return statusList, nil
+	for i, status := range statuses {
+		attachments, err := r.findAttachments(ctx, status.ID)
+		if err != nil {
+			return nil, err
+		}
+		statuses[i].MediaAttachments = attachments
+	}
+
+	return statuses, nil
 }
