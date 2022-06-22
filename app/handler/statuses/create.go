@@ -9,7 +9,8 @@ import (
 
 // Request body for `POST /v1/statuses`
 type AddRequest struct {
-	Status string
+	Status   string  `json:"status"`
+	MediaIDs []int64 `json:"media_ids"`
 }
 
 // Handle request for `POST /v1/statuses`
@@ -25,7 +26,7 @@ func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 	account := auth.AccountOf(r)
 
 	statusRepo := h.app.Dao.Status()
-	id, err := statusRepo.Create(ctx, account.ID, req.Status)
+	id, err := statusRepo.Create(ctx, account.ID, req.Status, req.MediaIDs)
 	if err != nil {
 		httperror.InternalServerError(w, err)
 		return

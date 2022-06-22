@@ -53,7 +53,7 @@ func Test_status_Create(t *testing.T) {
 			ctx := context.TODO()
 			repo := dao.NewStatus(sqlxDB)
 
-			if _, err := repo.Create(ctx, tt.args.ID, tt.args.Content); !isExpectedError(tt.expectErr, err) {
+			if _, err := repo.Create(ctx, tt.args.ID, tt.args.Content, []int64{}); !isExpectedError(tt.expectErr, err) {
 				t.Errorf("error was not expected: %v", err)
 			}
 			if err := mock.ExpectationsWereMet(); err != nil {

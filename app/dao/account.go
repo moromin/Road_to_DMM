@@ -109,7 +109,7 @@ func (r *account) Unfollow(ctx context.Context, followerID, followeeID int64) (i
 	err := Transaction(r.db, func(tx *sqlx.Tx) error {
 		var err error
 		const following = `SELECT * FROM follow WHERE follower_id = ? AND followee_id = ?`
-		if err := r.db.QueryRowxContext(ctx, following, followerID, followeeID).Scan(&empty.I, &empty.J, &empty.K); err != nil {
+		if err := tx.QueryRowxContext(ctx, following, followerID, followeeID).Scan(&empty.I, &empty.J, &empty.K); err != nil {
 			return err
 		}
 

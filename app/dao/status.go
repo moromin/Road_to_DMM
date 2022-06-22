@@ -22,35 +22,66 @@ func NewStatus(db *sqlx.DB) repository.Status {
 }
 
 // CreateAccount : content, accountIDから新しいステータスを作成
-func (r *status) Create(ctx context.Context, accountID int64, content string) (int64, error) {
-	query := `INSERT INTO status (
-				account_id,
-				content
-			  ) VALUES (
-				?, ?
-			  )`
+func (r *status) Create(ctx context.Context, accountID int64, content string, attachmentIDs []int64) (int64, error) {
+	var id int64
 
-	// _, err := r.db.QueryContext(ctx, query, accountID, content)
-	res, err := r.db.ExecContext(ctx, query, accountID, content)
+	err := Transaction(r.db, func(tx *sqlx.Tx) error {
+		const registerStatus = `INSERT INTO status (account_id, content) VALUES (?, ?)`
+		res, err := tx.ExecContext(ctx, registerStatus, accountID, content)
+		if err != nil {
+			return err
+		}
+		id, err = res.LastInsertId()
+		if err != nil {
+			return err
+		}
+
+		if len(attachmentIDs) == 0 {
+			return nil
+		}
+
+		count := 0
+		findAttachments, params, err := sqlx.In(`SELECT COUNT(*) FROM attachment WHERE id IN (?)`, attachmentIDs)
+		if err != nil {
+			return err
+		}
+		if err := tx.QueryRowxContext(ctx, findAttachments, params...).Scan(&count); err != nil {
+			return err
+		} else if count != len(attachmentIDs) {
+			return fmt.Errorf("attachments %v specified by 'media_ids' is invalid", attachmentIDs)
+		}
+
+		type StatusAttachment struct {
+			StatusID     int64 `db:"status_id"`
+			AttachmentID int64 `db:"attachment_id"`
+		}
+		statusAttachments := make([]StatusAttachment, len(attachmentIDs))
+		for i, attachmentID := range attachmentIDs {
+			statusAttachments[i] = StatusAttachment{
+				StatusID:     id,
+				AttachmentID: attachmentID,
+			}
+		}
+		const registerStatusAttachment = `INSERT INTO status_attachment (status_id, attachment_id) VALUES (:status_id, :attachment_id)`
+		if _, err := tx.NamedExecContext(ctx, registerStatusAttachment, statusAttachments); err != nil {
+			return err
+		}
+
+		return nil
+	})
 	if err != nil {
 		return 0, err
 	}
 
-	id, err := res.LastInsertId()
-	if err != nil {
-		return 0, err
-	}
 	return id, nil
 }
 
 // FindByID : IDからステータスを取得
 func (r *status) FindByID(ctx context.Context, id int64) (*object.Status, error) {
-	entity := &object.Status{}
+	status := &object.Status{}
 
-	query := `select *
-			  from status
-			  where id = ?`
-	err := r.db.QueryRowxContext(ctx, query, id).StructScan(entity)
+	const findStatus = `SELECT * FROM status WHERE id = ?`
+	err := r.db.QueryRowxContext(ctx, findStatus, id).StructScan(status)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -58,7 +89,16 @@ func (r *status) FindByID(ctx context.Context, id int64) (*object.Status, error)
 		return nil, err
 	}
 
-	return entity, nil
+	const findAttachments = `SELECT a.*
+							FROM status_attachment as sa
+							JOIN attachment as a
+							ON sa.attachment_id = a.id
+							WHERE sa.status_id = ?`
+	if err := r.db.SelectContext(ctx, &status.MediaAttachments, findAttachments, id); err != nil {
+		return nil, err
+	}
+
+	return status, nil
 }
 
 // DeleteByID : IDからステータスを削除

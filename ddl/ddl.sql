@@ -42,3 +42,13 @@ CREATE TABLE `attachment` (
   `description` varchar(420),
   PRIMARY KEY (`id`)
 );
+
+CREATE TABLE `status_attachment` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `status_id` bigint(20) NOT NULL,
+  `attachment_id` bigint(20) NOT NULL,
+  CONSTRAINT `fk_status_id` FOREIGN KEY (`status_id`) REFERENCES  `status` (`id`),
+  CONSTRAINT `fk_attachment_id` FOREIGN KEY (`attachment_id`) REFERENCES  `attachment` (`id`),
+  PRIMARY KEY (`id`),
+  UNIQUE st_at (status_id, attachment_id)
+)
