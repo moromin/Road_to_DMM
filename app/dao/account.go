@@ -25,8 +25,9 @@ func NewAccount(db *sqlx.DB) repository.Account {
 
 // FindByUsername : ユーザ名からユーザを取得
 func (r *account) FindByUsername(ctx context.Context, username string) (*object.Account, error) {
-	entity := new(object.Account)
-	err := r.db.QueryRowxContext(ctx, "select * from account where username = ?", username).StructScan(entity)
+	account := &object.Account{}
+	const findAccountByUsername = `SELECT * FROM account WHERE username = ?`
+	err := r.db.QueryRowxContext(ctx, findAccountByUsername, username).StructScan(account)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -34,16 +35,14 @@ func (r *account) FindByUsername(ctx context.Context, username string) (*object.
 		return nil, err
 	}
 
-	return entity, nil
+	return account, nil
 }
 
 // FindByUsername : IDからユーザを取得
 func (r *account) FindByID(ctx context.Context, id int64) (*object.Account, error) {
-	entity := new(object.Account)
-	query := `select *
-			  from account
-			  where id = ?`
-	err := r.db.QueryRowxContext(ctx, query, id).StructScan(entity)
+	account := &object.Account{}
+	const findAccountByID = `SELECT * FROM account WHERE id = ?`
+	err := r.db.QueryRowxContext(ctx, findAccountByID, id).StructScan(account)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -51,31 +50,20 @@ func (r *account) FindByID(ctx context.Context, id int64) (*object.Account, erro
 		return nil, err
 	}
 
-	return entity, nil
+	return account, nil
 }
 
 // CreateAccount : username, passwordから新しいアカウントを作成
 func (r *account) CreateAccount(ctx context.Context, username, password string) error {
-	query := `insert into account (
-				username,
-				password_hash
-			  ) values (
-				  ?, ?
-			  )`
-	_, err := r.db.QueryContext(ctx, query, username, password)
-	if err != nil {
-		return err
-	}
+	const createAccount = `INSERT INTO account (username, password_hash) VALUES (?, ?)`
+	_, err := r.db.QueryContext(ctx, createAccount, username, password)
 
-	return nil
+	return err
 }
 
 // Follow : アカウントをフォロー
 func (r *account) Follow(ctx context.Context, followerID, followeeID int64) (int64, bool, error) {
-	var followedBy bool
-
 	err := Transaction(r.db, func(tx *sqlx.Tx) error {
-		var err error
 		const follow = `INSERT INTO follow (follower_id, followee_id) VALUES (?, ?)`
 		if _, err := tx.ExecContext(ctx, follow, followerID, followeeID); err != nil {
 			return err
@@ -88,12 +76,13 @@ func (r *account) Follow(ctx context.Context, followerID, followeeID int64) (int
 			return err
 		}
 
-		if followedBy, err = r.findRelationship(ctx, followeeID, followerID); err != nil {
-			return err
-		}
-
 		return nil
 	})
+	if err != nil {
+		return 0, false, err
+	}
+
+	followedBy, err := r.findRelationship(ctx, followeeID, followerID)
 	if err != nil {
 		return 0, false, err
 	}
@@ -103,11 +92,8 @@ func (r *account) Follow(ctx context.Context, followerID, followeeID int64) (int
 
 // Unfollow : アカウントのフォロー解除
 func (r *account) Unfollow(ctx context.Context, followerID, followeeID int64) (int64, bool, error) {
-	var followedBy bool
-	var empty struct{ I, J, K int64 }
-
 	err := Transaction(r.db, func(tx *sqlx.Tx) error {
-		var err error
+		var empty struct{ I, J, K int64 }
 		const following = `SELECT * FROM follow WHERE follower_id = ? AND followee_id = ?`
 		if err := tx.QueryRowxContext(ctx, following, followerID, followeeID).Scan(&empty.I, &empty.J, &empty.K); err != nil {
 			return err
@@ -125,12 +111,13 @@ func (r *account) Unfollow(ctx context.Context, followerID, followeeID int64) (i
 			return err
 		}
 
-		if followedBy, err = r.findRelationship(ctx, followeeID, followerID); err != nil {
-			return err
-		}
-
 		return nil
 	})
+	if err != nil {
+		return 0, false, err
+	}
+
+	followedBy, err := r.findRelationship(ctx, followeeID, followerID)
 	if err != nil {
 		return 0, false, err
 	}
@@ -150,8 +137,8 @@ func (r *account) manageNumberOfFollows(ctx context.Context, tx *sqlx.Tx, id int
 		number *= -1
 	}
 
-	query := fmt.Sprintf("UPDATE account SET %s = %s %s %d WHERE id = %d", column, column, operator, number, id)
-	_, err := tx.ExecContext(ctx, query)
+	updateFollows := fmt.Sprintf("UPDATE account SET %s = %s %s %d WHERE id = %d", column, column, operator, number, id)
+	_, err := tx.ExecContext(ctx, updateFollows)
 
 	return err
 }
@@ -187,29 +174,14 @@ func (r *account) findRelationship(ctx context.Context, followerID, followeeID i
 
 // FindFollowing : フォローしているアカウント情報を取得する
 func (r *account) FindFollowing(ctx context.Context, follower_id, limit int64) ([]object.Account, error) {
-	query := `SELECT a.*
-				FROM follow as f
-				JOIN account as a
-				ON f.followee_id = a.id
-				WHERE follower_id = ?
-				LIMIT ?`
-
-	rows, err := r.db.QueryxContext(ctx, query, follower_id, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	accounts := make([]object.Account, 0)
-	for rows.Next() {
-		account := object.Account{}
-		err := rows.StructScan(&account)
-		if err != nil {
-			return nil, err
-		}
-		accounts = append(accounts, account)
-	}
-	if err := rows.Err(); err != nil {
+	const findFollowing = `SELECT a.*
+							FROM follow as f
+							JOIN account as a
+							ON f.followee_id = a.id
+							WHERE follower_id = ?
+							LIMIT ?`
+	accounts := []object.Account{}
+	if err := r.db.SelectContext(ctx, &accounts, findFollowing, follower_id, limit); err != nil {
 		return nil, err
 	}
 
@@ -225,29 +197,14 @@ func (r *account) FindFollowers(ctx context.Context, followeeID, maxID, sinceID,
 	} else {
 		connection = "WHERE"
 	}
-	query := fmt.Sprintf(`SELECT a.*
+	findFollowers := fmt.Sprintf(`SELECT a.*
 								FROM follow as f
 								JOIN account as a
 								ON f.follower_id = a.id
 								%s %s followee_id = %d
 								LIMIT %d`, idRange, connection, followeeID, limit)
-
-	rows, err := r.db.QueryxContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	accounts := make([]object.Account, 0)
-	for rows.Next() {
-		account := object.Account{}
-		err := rows.StructScan(&account)
-		if err != nil {
-			return nil, err
-		}
-		accounts = append(accounts, account)
-	}
-	if err := rows.Err(); err != nil {
+	accounts := []object.Account{}
+	if err := r.db.SelectContext(ctx, &accounts, findFollowers); err != nil {
 		return nil, err
 	}
 
@@ -278,7 +235,7 @@ func (r *account) UpdateCredentials(ctx context.Context, id int64, displayName, 
 		return nil
 	}
 
-	query := fmt.Sprintf("UPDATE account SET %s WHERE id = %d", columns, id)
-	_, err := r.db.ExecContext(ctx, query)
+	updateCredentials := fmt.Sprintf("UPDATE account SET %s WHERE id = %d", columns, id)
+	_, err := r.db.ExecContext(ctx, updateCredentials)
 	return err
 }
