@@ -2,6 +2,7 @@ package dao
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -20,4 +21,25 @@ func initDb(config DBConfig) (*sqlx.DB, error) {
 	}
 
 	return db, nil
+}
+
+// Transaction handle specific process
+// Essentially, it should be abstracted by DB interface
+func Transaction(db *sqlx.DB, txFunc func(*sqlx.Tx) error) error {
+	tx, err := db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			log.Println("rollback")
+			tx.Rollback()
+		} else {
+			err = tx.Commit()
+		}
+	}()
+
+	err = txFunc(tx)
+	return err
 }

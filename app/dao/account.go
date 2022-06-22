@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"yatter-backend-go/app/domain/object"
 	"yatter-backend-go/app/domain/repository"
 
@@ -75,7 +74,7 @@ func (r *account) CreateAccount(ctx context.Context, username, password string) 
 func (r *account) Follow(ctx context.Context, followerID, followeeID int64) (int64, bool, error) {
 	var followedBy bool
 
-	err := r.Transaction(func(tx *sqlx.Tx) error {
+	err := Transaction(r.db, func(tx *sqlx.Tx) error {
 		var err error
 		const follow = `INSERT INTO follow (follower_id, followee_id) VALUES (?, ?)`
 		if _, err := tx.ExecContext(ctx, follow, followerID, followeeID); err != nil {
@@ -107,7 +106,7 @@ func (r *account) Unfollow(ctx context.Context, followerID, followeeID int64) (i
 	var followedBy bool
 	var empty struct{ I, J, K int64 }
 
-	err := r.Transaction(func(tx *sqlx.Tx) error {
+	err := Transaction(r.db, func(tx *sqlx.Tx) error {
 		var err error
 		const following = `SELECT * FROM follow WHERE follower_id = ? AND followee_id = ?`
 		if err := r.db.QueryRowxContext(ctx, following, followerID, followeeID).Scan(&empty.I, &empty.J, &empty.K); err != nil {
@@ -154,27 +153,6 @@ func (r *account) manageNumberOfFollows(ctx context.Context, tx *sqlx.Tx, id int
 	query := fmt.Sprintf("UPDATE account SET %s = %s %s %d WHERE id = %d", column, column, operator, number, id)
 	_, err := tx.ExecContext(ctx, query)
 
-	return err
-}
-
-// Transaction handle specific process
-// Essentially, it should be abstracted by DB interface
-func (r *account) Transaction(txFunc func(*sqlx.Tx) error) error {
-	tx, err := r.db.Beginx()
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if err != nil {
-			log.Println("rollback")
-			tx.Rollback()
-		} else {
-			err = tx.Commit()
-		}
-	}()
-
-	err = txFunc(tx)
 	return err
 }
 
