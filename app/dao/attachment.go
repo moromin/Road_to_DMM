@@ -52,11 +52,10 @@ func (r *attachment) UploadFile(ctx context.Context, file io.Reader, filename, f
 		return nil, err
 	}
 
-	attachment := &object.Attachment{
+	return &object.Attachment{
 		ID:          id,
 		Type:        filetype,
 		URL:         dstName,
 		Description: description,
-	}
-	return attachment, nil
+	}, nil
 }
