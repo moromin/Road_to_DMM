@@ -19,6 +19,7 @@
 /.data/
 
 files/
+.DS_Store
 
 # VSCode
 thunder-tests
