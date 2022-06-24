@@ -36,7 +36,7 @@ func (r *status) Create(ctx context.Context, accountID int64, content string, at
 			return err
 		}
 
-		if len(attachmentIDs) == 0 {
+		if attachmentIDs == nil || len(attachmentIDs) == 0 {
 			return nil
 		}
 
