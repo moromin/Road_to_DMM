@@ -8,5 +8,5 @@ import (
 
 type Attachment interface {
 	// Upload file
-	UploadFile(ctx context.Context, file io.Reader, filename, filetype, description string) (*object.Attachment, error)
+	UploadFile(ctx context.Context, file io.Reader, fileDir, filename, filetype, description string) (*object.Attachment, error)
 }

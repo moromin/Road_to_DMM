@@ -23,9 +23,7 @@ func NewAttachment(db *sqlx.DB) repository.Attachment {
 	return &attachment{db: db}
 }
 
-const fileDir = "./files"
-
-func (r *attachment) UploadFile(ctx context.Context, file io.Reader, filename, filetype, description string) (*object.Attachment, error) {
+func (r *attachment) UploadFile(ctx context.Context, file io.Reader, fileDir, filename, filetype, description string) (*object.Attachment, error) {
 	if err := os.MkdirAll(fileDir, os.ModePerm); err != nil {
 		return nil, err
 	}

@@ -36,7 +36,7 @@ func (h *handler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	attachment, err := repo.UploadFile(ctx, file, fileHeader.Filename, filetype, description)
+	attachment, err := repo.UploadFile(ctx, file, FilesDir, fileHeader.Filename, filetype, description)
 	if err != nil {
 		httperror.InternalServerError(w, err)
 		return
