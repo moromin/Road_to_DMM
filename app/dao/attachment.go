@@ -23,6 +23,8 @@ func NewAttachment(db *sqlx.DB) repository.Attachment {
 	return &attachment{db: db}
 }
 
+const FilesPath = "localhost:8080/v1/media/"
+
 func (r *attachment) UploadFile(ctx context.Context, file io.Reader, fileDir, filename, filetype, description string) (*object.Attachment, error) {
 	if err := os.MkdirAll(fileDir, os.ModePerm); err != nil {
 		return nil, err
@@ -39,8 +41,10 @@ func (r *attachment) UploadFile(ctx context.Context, file io.Reader, fileDir, fi
 		return nil, err
 	}
 
+	url := FilesPath + dstName
+
 	const query = `INSERT INTO attachment (type, url, description) VALUES (?, ?, ?)`
-	res, err := r.db.ExecContext(ctx, query, filetype, dstName, description)
+	res, err := r.db.ExecContext(ctx, query, filetype, url, description)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +57,7 @@ func (r *attachment) UploadFile(ctx context.Context, file io.Reader, fileDir, fi
 	return &object.Attachment{
 		ID:          id,
 		Type:        filetype,
-		URL:         dstName,
+		URL:         url,
 		Description: description,
 	}, nil
 }

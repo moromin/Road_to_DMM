@@ -1,9 +1,9 @@
 package media
 
 import (
-	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"yatter-backend-go/app/app"
 
 	"github.com/go-chi/chi"
@@ -13,7 +13,7 @@ type handler struct {
 	app *app.App
 }
 
-const FilesDir = "./files"
+const FilesDir = "files"
 
 func NewRouter(app *app.App) http.Handler {
 	r := chi.NewRouter()
@@ -23,8 +23,8 @@ func NewRouter(app *app.App) http.Handler {
 	r.Post("/", h.Upload)
 
 	workDir, _ := os.Getwd()
-	filePath := workDir + "/files"
-	log.Println(filePath)
+	filesDir := http.Dir(filepath.Join(workDir, FilesDir))
+	FileServer(r, "/files", filesDir)
 
 	return r
 }
