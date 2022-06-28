@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// TODO: create test Main(), setup() and tearDown() to simplify tests
 type DatabaseTestSuite struct {
 	suite.Suite
 
