@@ -39,7 +39,7 @@ func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	repo := h.app.Dao.Account()
 	if err := repo.CreateAccount(ctx, account.Username, account.PasswordHash); err != nil {
-		httperror.BadRequest(w, err)
+		httperror.InternalServerError(w, err)
 		return
 	}
 
