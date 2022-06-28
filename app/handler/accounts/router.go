@@ -7,18 +7,23 @@ import (
 	"yatter-backend-go/app/handler/auth"
 
 	"github.com/go-chi/chi"
+	"github.com/go-playground/validator/v10"
 )
 
 // Implementation of handler
 type handler struct {
-	app *app.App
+	app       *app.App
+	validator *validator.Validate
 }
 
 // Create Handler for `/v1/accounts/`
-func NewRouter(app *app.App) http.Handler {
+func NewRouter(app *app.App, validator *validator.Validate) http.Handler {
 	r := chi.NewRouter()
 
-	h := &handler{app: app}
+	h := &handler{
+		app:       app,
+		validator: validator,
+	}
 
 	r.Route("/", func(r chi.Router) {
 		r.Use(auth.BasicAuth(h.app))

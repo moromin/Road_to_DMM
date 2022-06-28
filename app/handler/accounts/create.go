@@ -6,20 +6,26 @@ import (
 
 	"yatter-backend-go/app/domain/object"
 	"yatter-backend-go/app/handler/httperror"
+	"yatter-backend-go/app/handler/validate"
 )
 
 // Request body for `POST /v1/accounts`
-type AddRequest struct {
-	Username string
-	Password string
+type CreateRequest struct {
+	Username string `validate:"required"`
+	Password string `validate:"required"`
 }
 
 // Handle request for `POST /v1/accounts`
 func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var req AddRequest
+	var req CreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httperror.BadRequest(w, err)
+		return
+	}
+
+	if err := validate.Validate(h.validator, req); err != nil {
 		httperror.BadRequest(w, err)
 		return
 	}
@@ -44,6 +50,7 @@ func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	account.CreateAt = res.CreateAt
 
+	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(account); err != nil {
 		httperror.InternalServerError(w, err)

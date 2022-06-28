@@ -14,10 +14,12 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
+	"github.com/go-playground/validator/v10"
 )
 
 func NewRouter(app *app.App) http.Handler {
 	r := chi.NewRouter()
+	v := validator.New()
 
 	// A good base middleware stack
 	r.Use(middleware.RequestID)
@@ -31,7 +33,7 @@ func NewRouter(app *app.App) http.Handler {
 	// processing should be stopped.
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	r.Mount("/v1/accounts", accounts.NewRouter(app))
+	r.Mount("/v1/accounts", accounts.NewRouter(app, v))
 
 	r.Mount("/v1/media", media.NewRouter(app))
 
