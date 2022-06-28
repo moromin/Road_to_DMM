@@ -7,7 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// Interface of configureation
+// Interface of configuration
 type DBConfig interface {
 	FormatDSN() string
 }

@@ -22,7 +22,6 @@ CREATE TABLE `status` (
   CONSTRAINT `fk_status_account_id` FOREIGN KEY (`account_id`) REFERENCES  `account` (`id`)
 );
 
--- TODO: automate migration
 CREATE TABLE `follow` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `follower_id` bigint(20) NOT NULL,
