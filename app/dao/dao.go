@@ -40,6 +40,10 @@ func New(config DBConfig) (Dao, error) {
 	return &dao{db: db}, nil
 }
 
+func NewDao(db *sqlx.DB) Dao {
+	return &dao{db: db}
+}
+
 func (d *dao) Account() repository.Account {
 	return NewAccount(d.db)
 }

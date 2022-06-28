@@ -7,18 +7,29 @@ import (
 
 // DaoMock is a mock implementation of Dao
 type DaoMock struct {
+	AccountMock    *mock.AccountMock
+	StatusMock     *mock.StatusMock
+	AttachmentMock *mock.AttachmentMock
+}
+
+func NewMock(accountMock *mock.AccountMock, statusMock *mock.StatusMock, attachmentMock *mock.AttachmentMock) *DaoMock {
+	return &DaoMock{
+		AccountMock:    accountMock,
+		StatusMock:     statusMock,
+		AttachmentMock: attachmentMock,
+	}
 }
 
 func (d *DaoMock) Account() repository.Account {
-	return &mock.AccountMock{}
+	return d.AccountMock
 }
 
 func (d *DaoMock) Status() repository.Status {
-	return &mock.StatusMock{}
+	return d.StatusMock
 }
 
 func (d *DaoMock) Attachment() repository.Attachment {
-	return &mock.AttachmentMock{}
+	return d.AttachmentMock
 }
 
 func (d *DaoMock) InitAll() error {
