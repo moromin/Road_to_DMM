@@ -4,14 +4,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
+	"strings"
 	"unicode/utf8"
 	"yatter-backend-go/app/handler/httperror"
 	"yatter-backend-go/app/handler/request"
+
+	"github.com/go-chi/chi"
 )
 
 const maxDescriptionLength = 420
 
+// Handle request for `POST /v1/media`
 func (h *handler) Upload(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -47,4 +52,26 @@ func (h *handler) Upload(w http.ResponseWriter, r *http.Request) {
 		httperror.InternalServerError(w, err)
 		return
 	}
+}
+
+// Handle request for `GET /v1/media/files/{id}`
+func FileServer(r chi.Router, path string, root http.FileSystem) {
+	if strings.ContainsAny(path, "{}*") {
+		log.Println("FileServer does not permit URL parameters.")
+		return
+	}
+
+	if path != "/" && path[len(path)-1] != '/' {
+		r.Get(path, http.RedirectHandler(path+"/", 301).ServeHTTP)
+		path += "/"
+	}
+
+	path += "*"
+
+	r.Get(path, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rctx := chi.RouteContext(r.Context())
+		pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "/*")
+		fs := http.StripPrefix(pathPrefix, http.FileServer(root))
+		fs.ServeHTTP(w, r)
+	}))
 }
