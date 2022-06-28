@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,7 +18,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	wantErr = true
+	noErr   = false
+)
+
 func TestAccount_Create(t *testing.T) {
+	t.Parallel()
+
 	type invalidRequest struct {
 		Invalid string `json:"invalid"`
 	}
@@ -82,6 +90,18 @@ func TestAccount_Create(t *testing.T) {
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 
+			var buf bytes.Buffer
+			var err error
+			if tt.args.CreateRequest != nil {
+				err = json.NewEncoder(&buf).Encode(tt.args.CreateRequest)
+			} else {
+				err = json.NewEncoder(&buf).Encode(tt.args.invalidRequest)
+			}
+			assert.Nil(t, err)
+
+			r := httptest.NewRequest(http.MethodPost, "/v1/accounts", &buf)
+			w := httptest.NewRecorder()
+
 			h := &handler{
 				app: &app.App{Dao: dao.NewMock(
 					&mock.AccountMock{
@@ -97,18 +117,6 @@ func TestAccount_Create(t *testing.T) {
 				)},
 				validator: validator.New(),
 			}
-
-			var buf bytes.Buffer
-			var err error
-			if tt.args.CreateRequest != nil {
-				err = json.NewEncoder(&buf).Encode(tt.args.CreateRequest)
-			} else {
-				err = json.NewEncoder(&buf).Encode(tt.args.invalidRequest)
-			}
-			assert.Nil(t, err)
-
-			r := httptest.NewRequest(http.MethodPost, "/v1/accounts", &buf)
-			w := httptest.NewRecorder()
 
 			h.Create(w, r)
 
@@ -131,21 +139,112 @@ func TestAccount_Create(t *testing.T) {
 	}
 }
 
-// t := s.T()
+func TestAccount_Get(t *testing.T) {
+	t.Parallel()
 
-// 	resp, err := s.PostJSON("/v1/accounts", `{"name": "test", "password": "secret"}`)
+	var (
+		displayName = "hoger"
+		avatar      = "blue.png"
+		header      = "green.png"
+		note        = "This is a note"
+	)
 
-// 	s.Assert().NoError(err)
-// 	if !s.Assert().Equal(resp.StatusCode, http.StatusOK) {
-// 		t.Skip("Status is not matched")
-// 	}
+	type args struct {
+		username string
+	}
+	type want struct {
+		account *object.Account
+		status  int
+		err     error
+	}
+	cases := map[string]struct {
+		args      args
+		want      want
+		expectErr bool
+	}{
+		"success": {
+			args: args{
+				username: "test",
+			},
+			want: want{
+				account: &object.Account{
+					Username:       "test",
+					DisplayName:    &displayName,
+					FollowersCount: 3,
+					FollowingCount: 5,
+					Avatar:         &avatar,
+					Header:         &header,
+					Note:           &note,
+				},
+				status: http.StatusOK,
+				err:    nil,
+			},
+			expectErr: noErr,
+		},
+		"not found": {
+			args: args{
+				username: "no_one",
+			},
+			want: want{
+				account: nil,
+				status:  http.StatusNotFound,
+				err:     nil,
+			},
+			expectErr: wantErr,
+		},
+		"failed to find account": {
+			args: args{
+				username: "test",
+			},
+			want: want{
+				account: nil,
+				status:  http.StatusInternalServerError,
+				err:     errors.New("failed to find account"),
+			},
+			expectErr: wantErr,
+		},
+	}
 
-// 	body, err := io.ReadAll(resp.Body)
-// 	if !s.Assert().NoError(err) {
-// 		t.Skip("Failed to read body")
-// 	}
+	for name, tt := range cases {
+		t.Run(name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/v1/accounts/%s", tt.args.username), nil)
+			w := httptest.NewRecorder()
 
-// 	var j map[string]interface{}
-// 	if s.Assert().NoError(json.Unmarshal(body, &j)) {
-// 		s.Assert().Equal("test", j["name"])
-// 	}
+			h := &handler{
+				app: &app.App{Dao: dao.NewMock(
+					&mock.AccountMock{
+						FindByUsernameFunc: func(ctx context.Context, username string) (*object.Account, error) {
+							return tt.want.account, tt.want.err
+						},
+					},
+					nil,
+					nil,
+				)},
+				validator: validator.New(),
+			}
+
+			h.Get(w, r)
+
+			assert.Equal(t, tt.want.status, w.Code)
+
+			var err error
+			var got object.Account
+			err = json.NewDecoder(w.Body).Decode(&got)
+			if tt.expectErr {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+
+			if tt.want.account != nil {
+				assert.Equal(t, tt.want.account.Username, got.Username)
+				assert.Equal(t, tt.want.account.FollowersCount, got.FollowersCount)
+				assert.Equal(t, tt.want.account.FollowingCount, got.FollowingCount)
+				assert.Equal(t, tt.want.account.DisplayName, got.DisplayName)
+				assert.Equal(t, tt.want.account.Avatar, got.Avatar)
+				assert.Equal(t, tt.want.account.Header, got.Header)
+				assert.Equal(t, tt.want.account.Note, got.Note)
+			}
+		})
+	}
+}
