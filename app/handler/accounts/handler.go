@@ -18,6 +18,19 @@ import (
 	"github.com/go-chi/chi"
 )
 
+var _ Handler = (*handler)(nil)
+
+type Handler interface {
+	Create(w http.ResponseWriter, r *http.Request)
+	Get(w http.ResponseWriter, r *http.Request)
+	Follow(w http.ResponseWriter, r *http.Request)
+	Unfollow(w http.ResponseWriter, r *http.Request)
+	Following(w http.ResponseWriter, r *http.Request)
+	Followers(w http.ResponseWriter, r *http.Request)
+	Relationships(w http.ResponseWriter, r *http.Request)
+	UpdateCredentials(w http.ResponseWriter, r *http.Request)
+}
+
 // Handle request for `POST /v1/accounts`
 // Request body
 type CreateRequest struct {

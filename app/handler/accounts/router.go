@@ -18,8 +18,13 @@ type handler struct {
 
 // Create Handler for `/v1/accounts/`
 func NewRouter(app *app.App, validator *validator.Validate) http.Handler {
-	r := chi.NewRouter()
+	router := chi.NewRouter()
+	_, r := newHandlerAndRouter(router, app, validator)
+	return r
+}
 
+// Create routing table for `/v1/accounts/` and handler
+func newHandlerAndRouter(r *chi.Mux, app *app.App, validator *validator.Validate) (Handler, http.Handler) {
 	h := &handler{
 		app:       app,
 		validator: validator,
@@ -38,5 +43,5 @@ func NewRouter(app *app.App, validator *validator.Validate) http.Handler {
 	r.Get("/{username}/following", h.Following)
 	r.Get("/{username}/followers", h.Followers)
 
-	return r
+	return h, r
 }

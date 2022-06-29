@@ -13,7 +13,9 @@ import (
 	"yatter-backend-go/app/dao"
 	"yatter-backend-go/app/domain/mock"
 	"yatter-backend-go/app/domain/object"
+	"yatter-backend-go/app/handler/auth"
 
+	"github.com/go-chi/chi"
 	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/assert"
 )
@@ -244,6 +246,130 @@ func TestAccount_Get(t *testing.T) {
 				assert.Equal(t, tt.want.account.Avatar, got.Avatar)
 				assert.Equal(t, tt.want.account.Header, got.Header)
 				assert.Equal(t, tt.want.account.Note, got.Note)
+			}
+		})
+	}
+}
+
+func TestAccount_Follow(t *testing.T) {
+	t.Parallel()
+
+	follower := &object.Account{
+		ID:       1,
+		Username: "follower",
+	}
+
+	type args struct {
+		username string
+	}
+	type want struct {
+		account      *object.Account
+		relationship *Relationship
+		status       int
+		err          error
+	}
+	cases := map[string]struct {
+		args      args
+		want      want
+		expectErr bool
+	}{
+		"success": {
+			args: args{
+				username: "test",
+			},
+			want: want{
+				account: &object.Account{
+					ID:             2,
+					Username:       "test",
+					FollowersCount: 3,
+					FollowingCount: 5,
+				},
+				relationship: &Relationship{
+					ID:         1,
+					Following:  true,
+					FollowedBy: false,
+				},
+				status: http.StatusOK,
+				err:    nil,
+			},
+			expectErr: noErr,
+		},
+		"not found": {
+			args: args{
+				username: "no_one",
+			},
+			want: want{
+				account: nil,
+				relationship: &Relationship{
+					ID:         -1,
+					Following:  false,
+					FollowedBy: false,
+				},
+				status: http.StatusBadRequest,
+				err:    nil,
+			},
+			expectErr: wantErr,
+		},
+		"follower yourself": {
+			args: args{
+				username: "follower",
+			},
+			want: want{
+				account:      nil,
+				relationship: nil,
+				status:       http.StatusBadRequest,
+				err:          nil,
+			},
+			expectErr: wantErr,
+		},
+	}
+
+	for name, tt := range cases {
+		t.Run(name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/v1/accounts/{%s}/follow", tt.args.username), nil)
+			w := httptest.NewRecorder()
+
+			r = auth.SetAccount(r, follower)
+
+			router := chi.NewRouter()
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("username", tt.args.username)
+
+			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+			app := &app.App{Dao: dao.NewMock(
+				&mock.AccountMock{
+					FindByUsernameFunc: func(ctx context.Context, username string) (*object.Account, error) {
+						return tt.want.account, tt.want.err
+					},
+					FollowFunc: func(ctx context.Context, followingID, followeeID int64) (int64, bool, error) {
+						return tt.want.relationship.ID, tt.want.relationship.FollowedBy, tt.want.err
+					},
+				},
+				nil,
+				nil,
+			)}
+			v := validator.New()
+
+			h, _ := newHandlerAndRouter(router, app, v)
+
+			h.Follow(w, r)
+
+			assert.Equal(t, tt.want.status, w.Code)
+
+			var err error
+			var got Relationship
+			err = json.NewDecoder(w.Body).Decode(&got)
+			if tt.expectErr {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+
+			if !tt.expectErr {
+				assert.Equal(t, tt.want.relationship.ID, got.ID)
+				assert.Equal(t, tt.want.relationship.Following, got.Following)
+				assert.Equal(t, tt.want.relationship.FollowedBy, got.FollowedBy)
 			}
 		})
 	}

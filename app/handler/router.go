@@ -17,9 +17,8 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-func NewRouter(app *app.App) http.Handler {
+func NewRouter(app *app.App, v *validator.Validate) http.Handler {
 	r := chi.NewRouter()
-	v := validator.New()
 
 	// A good base middleware stack
 	r.Use(middleware.RequestID)

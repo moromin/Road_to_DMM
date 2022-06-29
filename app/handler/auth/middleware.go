@@ -82,6 +82,10 @@ func AccountOf(r *http.Request) *object.Account {
 
 	} else {
 		return account
-
 	}
+}
+
+// Set Account data to authorized request
+func SetAccount(r *http.Request, account *object.Account) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), contextKey, account))
 }

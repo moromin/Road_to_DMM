@@ -9,6 +9,8 @@ import (
 	"yatter-backend-go/app/app"
 	"yatter-backend-go/app/config"
 	"yatter-backend-go/app/handler"
+
+	"github.com/go-playground/validator/v10"
 )
 
 func main() {
@@ -20,8 +22,9 @@ func serve(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	v := validator.New()
 	addr := ":" + strconv.Itoa(config.Port())
 	log.Printf("Serve on http://%s", addr)
 
-	return http.ListenAndServe(addr, handler.NewRouter(app))
+	return http.ListenAndServe(addr, handler.NewRouter(app, v))
 }

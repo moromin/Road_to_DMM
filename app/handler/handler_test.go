@@ -12,6 +12,7 @@ import (
 
 	"yatter-backend-go/app/app"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -65,12 +66,13 @@ func setup(t *testing.T) *C {
 	if err != nil {
 		panic(err)
 	}
+	v := validator.New()
 
 	if err := app.Dao.InitAll(); err != nil {
 		t.Fatal(err)
 	}
 
-	server := httptest.NewServer(NewRouter(app))
+	server := httptest.NewServer(NewRouter(app, v))
 
 	return &C{
 		App:    app,
