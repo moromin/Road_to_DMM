@@ -104,21 +104,24 @@ func TestAccount_Create(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/v1/accounts", &buf)
 			w := httptest.NewRecorder()
 
-			h := &handler{
-				app: &app.App{Dao: dao.NewMock(
-					&mock.AccountMock{
-						CreateAccountFunc: func(ctx context.Context, username string, passwordHash string) error {
-							return tt.want.err
-						},
-						FindByUsernameFunc: func(ctx context.Context, username string) (*object.Account, error) {
-							return tt.want.account, tt.want.err
-						},
+			router := chi.NewRouter()
+
+			app := &app.App{Dao: dao.NewMock(
+				&mock.AccountMock{
+					CreateAccountFunc: func(ctx context.Context, username string, passwordHash string) error {
+						return tt.want.err
 					},
-					nil,
-					nil,
-				)},
-				validator: validator.New(),
-			}
+					FindByUsernameFunc: func(ctx context.Context, username string) (*object.Account, error) {
+						return tt.want.account, tt.want.err
+					},
+				},
+				nil,
+				nil,
+			)}
+
+			v := validator.New()
+
+			h, _ := newHandlerAndRouter(router, app, v)
 
 			h.Create(w, r)
 
@@ -209,21 +212,28 @@ func TestAccount_Get(t *testing.T) {
 
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
-			r := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/v1/accounts/%s", tt.args.username), nil)
+			r := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/v1/accounts/{%s}", tt.args.username), nil)
 			w := httptest.NewRecorder()
 
-			h := &handler{
-				app: &app.App{Dao: dao.NewMock(
-					&mock.AccountMock{
-						FindByUsernameFunc: func(ctx context.Context, username string) (*object.Account, error) {
-							return tt.want.account, tt.want.err
-						},
+			router := chi.NewRouter()
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("username", tt.args.username)
+
+			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+			app := &app.App{Dao: dao.NewMock(
+				&mock.AccountMock{
+					FindByUsernameFunc: func(ctx context.Context, username string) (*object.Account, error) {
+						return tt.want.account, tt.want.err
 					},
-					nil,
-					nil,
-				)},
-				validator: validator.New(),
-			}
+				},
+				nil,
+				nil,
+			)}
+
+			v := validator.New()
+
+			h, _ := newHandlerAndRouter(router, app, v)
 
 			h.Get(w, r)
 
