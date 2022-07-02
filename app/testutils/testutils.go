@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 	"yatter-backend-go/app/app"
-	"yatter-backend-go/app/dao"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/ory/dockertest/v3"
@@ -56,12 +55,12 @@ func CreateContainer(t *testing.T) (*dockertest.Resource, *dockertest.Pool) {
 			pwd + "/.data/mysql:/etc/mysql",
 			pwd + "/ddl:/docker-entrypoint-initdb.d",
 		},
-		Cmd: []string{
-			"mysqld",
-			"--character-set-server=utf8mb4",
-			"--collation-server=utf8mb4_bin",
-			"--default-time-zone='+9:00'",
-		},
+		// Cmd: []string{
+		// 	"mysqld",
+		// 	"--character-set-server=utf8mb4",
+		// 	"--collation-server=utf8mb4_bin",
+		// 	"--default-time-zone='+9:00'",
+		// },
 	}
 
 	resource, err := pool.RunWithOptions(runOptions)
@@ -118,19 +117,19 @@ func ConnectDB(t *testing.T, resource *dockertest.Resource, pool *dockertest.Poo
 }
 
 // Common test helper
-func (s *Suite) Setup() {
-	t := s.T()
-	s.Resource, s.Pool = CreateContainer(t)
-	s.Conn = ConnectDB(t, s.Resource, s.Pool)
-	s.SqlxDB = sqlx.NewDb(s.Conn, "mysql")
-	s.App = &app.App{Dao: dao.NewDao(s.SqlxDB)}
-}
+// func (s *Suite) Setup() {
+// 	t := s.T()
+// 	s.Resource, s.Pool = CreateContainer(t)
+// 	s.Conn = ConnectDB(t, s.Resource, s.Pool)
+// 	s.SqlxDB = sqlx.NewDb(s.Conn, "mysql")
+// 	s.App = &app.App{Dao: dao.NewDao(s.SqlxDB)}
+// }
 
-func (s *Suite) Teardown() {
-	t := s.T()
-	s.Server.Close()
-	CloseContainer(t, s.Resource, s.Pool)
-}
+// func (s *Suite) Teardown() {
+// 	t := s.T()
+// 	s.Server.Close()
+// 	CloseContainer(t, s.Resource, s.Pool)
+// }
 
 // Handler test helper
 func (s *Suite) PostJSON(apiPath string, payload string) (*http.Response, error) {
