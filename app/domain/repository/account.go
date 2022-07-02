@@ -14,7 +14,7 @@ type Account interface {
 	FindByID(ctx context.Context, id int64) (*object.Account, error)
 
 	// Create an account which has specified username and password
-	CreateAccount(ctx context.Context, username, password string) error
+	CreateAccount(ctx context.Context, username, password string) (int64, error)
 
 	// Follow an account
 	Follow(ctx context.Context, followerID, followeeID int64) (int64, bool, error)

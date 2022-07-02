@@ -38,6 +38,7 @@ func TestAccount_Create(t *testing.T) {
 	}
 	type want struct {
 		account *object.Account
+		id      int64
 		status  int
 		err     error
 	}
@@ -58,6 +59,7 @@ func TestAccount_Create(t *testing.T) {
 					FollowersCount: 0,
 					FollowingCount: 0,
 				},
+				id:     1,
 				status: http.StatusCreated,
 				err:    nil,
 			},
@@ -108,10 +110,10 @@ func TestAccount_Create(t *testing.T) {
 
 			app := &app.App{Dao: dao.NewMock(
 				&mock.AccountMock{
-					CreateAccountFunc: func(ctx context.Context, username string, passwordHash string) error {
-						return tt.want.err
+					CreateAccountFunc: func(ctx context.Context, username string, passwordHash string) (int64, error) {
+						return tt.want.id, tt.want.err
 					},
-					FindByUsernameFunc: func(ctx context.Context, username string) (*object.Account, error) {
+					FindByIDFunc: func(ctx context.Context, id int64) (*object.Account, error) {
 						return tt.want.account, tt.want.err
 					},
 				},

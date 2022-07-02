@@ -54,11 +54,19 @@ func (r *account) FindByID(ctx context.Context, id int64) (*object.Account, erro
 }
 
 // CreateAccount : username, passwordから新しいアカウントを作成
-func (r *account) CreateAccount(ctx context.Context, username, password string) error {
+func (r *account) CreateAccount(ctx context.Context, username, password string) (int64, error) {
 	const createAccount = `INSERT INTO account (username, password_hash) VALUES (?, ?)`
-	_, err := r.db.QueryContext(ctx, createAccount, username, password)
+	res, err := r.db.ExecContext(ctx, createAccount, username, password)
+	if err != nil {
+		return 0, err
+	}
 
-	return err
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+
+	return id, err
 }
 
 // Follow : アカウントをフォロー

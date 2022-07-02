@@ -60,12 +60,13 @@ func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	repo := h.app.Dao.Account()
-	if err := repo.CreateAccount(ctx, account.Username, account.PasswordHash); err != nil {
+	id, err := repo.CreateAccount(ctx, account.Username, account.PasswordHash)
+	if err != nil {
 		httperror.InternalServerError(w, err)
 		return
 	}
 
-	res, err := repo.FindByUsername(ctx, account.Username)
+	res, err := repo.FindByID(ctx, id)
 	if err != nil {
 		httperror.InternalServerError(w, err)
 		return

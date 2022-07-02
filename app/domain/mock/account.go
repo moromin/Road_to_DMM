@@ -9,7 +9,7 @@ import (
 type AccountMock struct {
 	FindByUsernameFunc    func(ctx context.Context, username string) (*object.Account, error)
 	FindByIDFunc          func(ctx context.Context, id int64) (*object.Account, error)
-	CreateAccountFunc     func(ctx context.Context, username, password string) error
+	CreateAccountFunc     func(ctx context.Context, username, password string) (int64, error)
 	FollowFunc            func(ctx context.Context, followerID, followeeID int64) (int64, bool, error)
 	UnfollowFunc          func(ctx context.Context, followerID, followeeID int64) (int64, bool, error)
 	FindRelationshipFunc  func(ctx context.Context, userID, targetID int64) (bool, bool, error)
@@ -29,7 +29,7 @@ func (m *AccountMock) FindByID(ctx context.Context, id int64) (*object.Account, 
 }
 
 // CreateAccount is a mock implementation of Account.CreateAccount
-func (m *AccountMock) CreateAccount(ctx context.Context, username, password string) error {
+func (m *AccountMock) CreateAccount(ctx context.Context, username, password string) (int64, error) {
 	return m.CreateAccountFunc(ctx, username, password)
 }
 
