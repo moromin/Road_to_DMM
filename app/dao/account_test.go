@@ -41,6 +41,7 @@ var (
 	testUser1 = object.Account{ID: 1, Username: "test1", PasswordHash: "secret"}
 	testUser2 = object.Account{ID: 2, Username: "test2", PasswordHash: "himitsu"}
 	testUser3 = object.Account{ID: 3, Username: "test3", PasswordHash: "password"}
+	testUser4 = object.Account{ID: 4, Username: "test4", PasswordHash: "amagasaki"}
 )
 
 func makeSeeds(client *sqlx.DB) {
@@ -270,10 +271,10 @@ func TestAccount_Follow(t *testing.T) {
 		"success": {
 			args: args{
 				followerID: testUser3.ID,
-				followeeID: testUser2.ID,
+				followeeID: testUser4.ID,
 			},
 			want: want{
-				id:         2,
+				id:         testUser4.ID,
 				followedBy: false,
 				err:        nil,
 			},
@@ -299,6 +300,230 @@ func TestAccount_Follow(t *testing.T) {
 			id, followedBy, err := repo.Follow(ctx, tt.args.followerID, tt.args.followeeID)
 			assert.Equal(t, tt.want.id, id)
 			assert.Equal(t, tt.want.followedBy, followedBy)
+			assert.Equal(t, tt.want.err, err)
+		})
+	}
+}
+
+func TestAccount_FindRelationship(t *testing.T) {
+	type args struct {
+		followerID int64
+		followeeID int64
+	}
+	type want struct {
+		following  bool
+		followedBy bool
+		err        error
+	}
+
+	cases := map[string]struct {
+		args args
+		want want
+	}{
+		"following": {
+			args: args{
+				followerID: testUser1.ID,
+				followeeID: testUser2.ID,
+			},
+			want: want{
+				following:  true,
+				followedBy: false,
+				err:        nil,
+			},
+		},
+		"followed": {
+			args: args{
+				followerID: testUser2.ID,
+				followeeID: testUser1.ID,
+			},
+			want: want{
+				following:  false,
+				followedBy: true,
+				err:        nil,
+			},
+		},
+		"no relationship": {
+			args: args{
+				followerID: testUser1.ID,
+				followeeID: testUser3.ID,
+			},
+			want: want{
+				following:  false,
+				followedBy: false,
+				err:        nil,
+			},
+		},
+	}
+
+	client := dbClient()
+	repo := dao.NewAccount(client)
+	ctx := context.Background()
+
+	for name, tt := range cases {
+		t.Run(name, func(t *testing.T) {
+			following, followedBy, err := repo.FindRelationship(ctx, tt.args.followerID, tt.args.followeeID)
+			assert.Equal(t, tt.want.following, following)
+			assert.Equal(t, tt.want.followedBy, followedBy)
+			assert.Equal(t, tt.want.err, err)
+		})
+	}
+}
+
+func TestAccount_FindFollowing(t *testing.T) {
+	type args struct {
+		id    int64
+		limit int64
+	}
+	type want struct {
+		accounts []object.Account
+		err      error
+	}
+
+	const (
+		defaultLimit = 40
+	)
+
+	cases := map[string]struct {
+		args args
+		want want
+	}{
+		"success": {
+			args: args{
+				id:    testUser1.ID,
+				limit: defaultLimit,
+			},
+			want: want{
+				accounts: []object.Account{
+					{
+						ID:             testUser2.ID,
+						Username:       testUser2.Username,
+						PasswordHash:   testUser2.PasswordHash,
+						FollowersCount: 1,
+						FollowingCount: 0,
+					},
+				},
+				err: nil,
+			},
+		},
+		"zero limit": {
+			args: args{
+				id:    testUser1.ID,
+				limit: 0,
+			},
+			want: want{
+				accounts: []object.Account{},
+				err:      nil,
+			},
+		},
+		"not exist account": {
+			args: args{
+				id:    testUser4.ID,
+				limit: defaultLimit,
+			},
+			want: want{
+				accounts: []object.Account{},
+				err:      nil,
+			},
+		},
+	}
+
+	client := dbClient()
+	repo := dao.NewAccount(client)
+	ctx := context.Background()
+
+	for name, tt := range cases {
+		t.Run(name, func(t *testing.T) {
+			got, err := repo.FindFollowing(ctx, tt.args.id, tt.args.limit)
+			for i, gotAccount := range got {
+				assert.Equal(t, tt.want.accounts[i].ID, gotAccount.ID)
+				assert.Equal(t, tt.want.accounts[i].Username, gotAccount.Username)
+				assert.Equal(t, tt.want.accounts[i].PasswordHash, gotAccount.PasswordHash)
+				assert.Equal(t, tt.want.accounts[i].FollowersCount, gotAccount.FollowersCount)
+				assert.Equal(t, tt.want.accounts[i].FollowingCount, gotAccount.FollowingCount)
+			}
+			assert.Equal(t, tt.want.err, err)
+		})
+	}
+}
+
+func TestAccount_FindFollowers(t *testing.T) {
+	type args struct {
+		id      int64
+		maxID   int64
+		sinceID int64
+		limit   int64
+	}
+	type want struct {
+		accounts []object.Account
+		err      error
+	}
+
+	const (
+		defaultLimit   = 40
+		defaultMaxID   = 0
+		defaultSinceID = 0
+	)
+
+	cases := map[string]struct {
+		args args
+		want want
+	}{
+		"success": {
+			args: args{
+				id:      testUser2.ID,
+				maxID:   defaultMaxID,
+				sinceID: defaultSinceID,
+				limit:   defaultLimit,
+			},
+			want: want{
+				accounts: []object.Account{
+					{
+						ID:             testUser1.ID,
+						Username:       testUser1.Username,
+						PasswordHash:   testUser1.PasswordHash,
+						FollowersCount: 0,
+						FollowingCount: 1,
+					},
+				},
+				err: nil,
+			},
+		},
+		"zero limit": {
+			args: args{
+				id:    testUser2.ID,
+				limit: 0,
+			},
+			want: want{
+				accounts: []object.Account{},
+				err:      nil,
+			},
+		},
+		"not exist account": {
+			args: args{
+				id:    testUser3.ID,
+				limit: defaultLimit,
+			},
+			want: want{
+				accounts: []object.Account{},
+				err:      nil,
+			},
+		},
+	}
+
+	client := dbClient()
+	repo := dao.NewAccount(client)
+	ctx := context.Background()
+
+	for name, tt := range cases {
+		t.Run(name, func(t *testing.T) {
+			got, err := repo.FindFollowers(ctx, tt.args.id, tt.args.maxID, tt.args.sinceID, tt.args.limit)
+			for i, gotAccount := range got {
+				assert.Equal(t, tt.want.accounts[i].ID, gotAccount.ID)
+				assert.Equal(t, tt.want.accounts[i].Username, gotAccount.Username)
+				assert.Equal(t, tt.want.accounts[i].PasswordHash, gotAccount.PasswordHash)
+				assert.Equal(t, tt.want.accounts[i].FollowersCount, gotAccount.FollowersCount)
+				assert.Equal(t, tt.want.accounts[i].FollowingCount, gotAccount.FollowingCount)
+			}
 			assert.Equal(t, tt.want.err, err)
 		})
 	}
