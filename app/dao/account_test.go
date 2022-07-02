@@ -1,253 +1,151 @@
-package dao
+package dao_test
 
 import (
 	"context"
-	"errors"
+	"database/sql"
 	"fmt"
 	"log"
-	"regexp"
+	"os"
+	"strings"
 	"testing"
 	"time"
-	"yatter-backend-go/app/domain/object"
+	"yatter-backend-go/app/dao"
 
-	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
+	"github.com/ory/dockertest/v3"
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_account_FindByUsername(t *testing.T) {
-	type args struct {
-		ctx      context.Context
-		username string
-	}
+var (
+	dockerDB *db
+)
 
-	query := "select * from account where username = ?"
-	displayName := "tester"
-	avater := "none"
-	header := "null"
-	note := "nothing to write"
-
-	want := &object.Account{
-		ID:           1,
-		Username:     "test user",
-		PasswordHash: "sdfadgadsgaaga",
-		DisplayName:  &displayName,
-		Avatar:       &avater,
-		Header:       &header,
-		Note:         &note,
-		CreateAt:     object.DateTime{Time: time.Now()},
-	}
-
-	tests := []struct {
-		name        string
-		mockClosure func(sqlmock.Sqlmock)
-		args        args
-		want        *object.Account
-		assertion   assert.ErrorAssertionFunc
-	}{
-		{
-			name: "Success",
-			mockClosure: func(mock sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{"id", "username", "password_hash", "display_name", "avatar", "header", "note", "create_at"}).
-					AddRow(want.ID, want.Username, want.PasswordHash, want.DisplayName,
-						want.Avatar, want.Header, want.Note, want.CreateAt)
-				mock.ExpectQuery(regexp.QuoteMeta(query)).
-					WithArgs(want.Username).
-					WillReturnRows(rows)
-			},
-			args: args{
-				ctx:      context.Background(),
-				username: want.Username,
-			},
-			want:      want,
-			assertion: assert.NoError,
-		},
-		{
-			name: "Failure to select",
-			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery(regexp.QuoteMeta(query)).
-					WillReturnError(fmt.Errorf("select error"))
-			},
-			args: args{
-				ctx:      context.Background(),
-				username: want.Username,
-			},
-			want:      nil,
-			assertion: assert.Error,
-		},
-	}
-
-	t.Parallel()
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockDB, mock, err := sqlmock.New()
-			if err != nil {
-				log.Fatal("failed to init db mock:", err)
-			}
-			sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
-			defer sqlxDB.Close()
-
-			tt.mockClosure(mock)
-
-			r := &account{
-				db: sqlxDB,
-			}
-			got, err := r.FindByUsername(tt.args.ctx, tt.args.username)
-			tt.assertion(t, err)
-			assert.Equal(t, tt.want, got)
-		})
-	}
+type db struct {
+	Conn *sql.DB
+	Sqlx *sqlx.DB
 }
 
-func Test_account_FindByID(t *testing.T) {
-	type args struct {
-		ctx context.Context
-		id  int64
-	}
-
-	query := `select * from account where id = ?`
-	displayName := "tester"
-	avater := "none"
-	header := "null"
-	note := "nothing to write"
-
-	want := &object.Account{
-		ID:           1,
-		Username:     "test user",
-		PasswordHash: "sdfadgadsgaaga",
-		DisplayName:  &displayName,
-		Avatar:       &avater,
-		Header:       &header,
-		Note:         &note,
-		CreateAt:     object.DateTime{Time: time.Now()},
-	}
-
-	tests := []struct {
-		name        string
-		mockClosure func(sqlmock.Sqlmock)
-		args        args
-		want        *object.Account
-		assertion   assert.ErrorAssertionFunc
-	}{
-		{
-			name: "Success",
-			mockClosure: func(mock sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{"id", "username", "password_hash", "display_name", "avatar", "header", "note", "create_at"}).
-					AddRow(want.ID, want.Username, want.PasswordHash, want.DisplayName,
-						want.Avatar, want.Header, want.Note, want.CreateAt)
-				mock.ExpectQuery(regexp.QuoteMeta(query)).
-					WithArgs(want.ID).
-					WillReturnRows(rows)
-			},
-			args: args{
-				ctx: context.Background(),
-				id:  want.ID,
-			},
-			want:      want,
-			assertion: assert.NoError,
-		},
-		{
-			name: "Failure to select",
-			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery(regexp.QuoteMeta(query)).
-					WillReturnError(fmt.Errorf("select error"))
-			},
-			args: args{
-				ctx: context.Background(),
-				id:  want.ID,
-			},
-			want:      nil,
-			assertion: assert.Error,
-		},
-	}
-
-	t.Parallel()
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockDB, mock, err := sqlmock.New()
-			if err != nil {
-				log.Fatal("failed to init db mock:", err)
-			}
-			sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
-			defer sqlxDB.Close()
-
-			tt.mockClosure(mock)
-
-			r := &account{
-				db: sqlxDB,
-			}
-			got, err := r.FindByID(tt.args.ctx, tt.args.id)
-			tt.assertion(t, err)
-			assert.Equal(t, tt.want, got)
-		})
-	}
+func dbClient() *sqlx.DB {
+	sqlxDB := sqlx.NewDb(dockerDB.Conn, "mysql")
+	dockerDB.Sqlx = sqlxDB
+	return sqlxDB
 }
 
-func Test_account_CreateAccount(t *testing.T) {
+func TestMain(m *testing.M) {
+	// dockertest
+	pool, err := dockertest.NewPool("")
+	if err != nil {
+		log.Fatalf("Could not connect to docker: %s", err)
+	}
+
+	pwd, _ := os.Getwd()
+
+	pwd = pwd[:strings.Index(pwd, "/app")]
+
+	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
+		Repository: "mysql",
+		Tag:        "5.7",
+		Env: []string{
+			"MYSQL_ROOT_PASSWORD=secret",
+			"MYSQL_DATABASE=mydb",
+		},
+		Mounts: []string{
+			pwd + "/ddl:/docker-entrypoint-initdb.d",
+		},
+	})
+	if err != nil {
+		log.Fatalf("Could not start resource: %s", err)
+	}
+
+	hostAndPort := resource.GetHostPort("3306/tcp")
+	databaseUrl := fmt.Sprintf("root:secret@tcp(%s)/mydb?parseTime=true", hostAndPort)
+	log.Println(databaseUrl)
+
+	_ = resource.Expire(120)
+
+	dockerDB = &db{}
+
+	pool.MaxWait = 120 * time.Second
+	if err = pool.Retry(func() error {
+		time.Sleep(time.Second * 10)
+
+		dockerDB.Conn, err = sql.Open("mysql", databaseUrl)
+		if err != nil {
+			return err
+		}
+		dockerDB.Conn.SetConnMaxLifetime(time.Second)
+		return dockerDB.Conn.Ping()
+	}); err != nil {
+		log.Fatalf("Could not connect to docker: %s", err)
+	}
+
+	code := m.Run()
+
+	if err := pool.Purge(resource); err != nil {
+		log.Fatalf("Could not purge resource: %s", err)
+	}
+
+	os.Exit(code)
+}
+
+func TestAccount_Create(t *testing.T) {
 	type args struct {
-		ctx      context.Context
-		username string
+		name     string
 		password string
 	}
+	type want struct {
+		id  int64
+		err error
+	}
 
-	query := `insert into account ( username, password_hash ) values ( ?, ? )`
-	username := "tester"
-	password_hash := "dfaewafasdfaefa"
+	const (
+		testUsername = "test"
+		testPassword = "secret"
+	)
 
-	tests := []struct {
-		name        string
-		mockClosure func(sqlmock.Sqlmock)
-		args        args
-		assertion   assert.ErrorAssertionFunc
+	ErrDupicateEntry := &mysql.MySQLError{
+		Number:  1062,
+		Message: fmt.Sprintf("Duplicate entry '%s' for key 'username'", testUsername),
+	}
+
+	cases := map[string]struct {
+		args args
+		want want
 	}{
-		{
-			name: "Success",
-			mockClosure: func(mock sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{"id", "username", "password_hash"}).
-					AddRow(1, username, password_hash)
-				mock.ExpectQuery(regexp.QuoteMeta(query)).
-					WillReturnRows(rows)
-			},
+		"success": {
 			args: args{
-				ctx:      context.Background(),
-				username: username,
-				password: password_hash,
+				name:     testUsername,
+				password: testPassword,
 			},
-			assertion: assert.NoError,
+			want: want{
+				id:  1,
+				err: nil,
+			},
 		},
-		{
-			name: "Failure to insert",
-			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectExec(regexp.QuoteMeta(query)).
-					WithArgs(username, password_hash).
-					WillReturnResult(sqlmock.NewErrorResult(errors.New("error"))).
-					WillReturnError(errors.New("insert failed"))
-			},
+		"duplicate": {
 			args: args{
-				ctx:      context.Background(),
-				username: username,
-				password: password_hash,
+				name:     testUsername,
+				password: testPassword,
 			},
-			assertion: assert.Error,
+			want: want{
+				id:  0,
+				err: ErrDupicateEntry,
+			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockDB, mock, err := sqlmock.New()
-			if err != nil {
-				log.Fatal("failed to init db mock:", err)
-			}
-			sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
-			defer sqlxDB.Close()
 
-			tt.mockClosure(mock)
+	client := dbClient()
+	repo := dao.NewAccount(client)
+	ctx := context.Background()
 
-			r := &account{
-				db: sqlxDB,
-			}
-			tt.assertion(t, r.CreateAccount(tt.args.ctx, tt.args.username, tt.args.password))
+	for name, tt := range cases {
+		t.Run(name, func(t *testing.T) {
+			got, err := repo.CreateAccount(ctx, tt.args.name, tt.args.password)
+			assert.Equal(t, tt.want.id, got)
+			assert.Equal(t, tt.want.err, err)
 		})
 	}
 }
